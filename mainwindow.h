@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "opencv/highgui.h"
+#include "opencv2/opencv.hpp"
 
 namespace Ui {
 class MainWindow;
