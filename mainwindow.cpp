@@ -8,6 +8,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 }
 
+using namespace cv;
+
 MainWindow::~MainWindow()
 {
     delete ui;
