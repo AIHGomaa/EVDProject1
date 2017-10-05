@@ -19,6 +19,8 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    void showImage(const char *winname, const Mat tex, int x, int y);
+    void showImage(const char *winname, const Mat tex, int position);
 };
 
 #endif // MAINWINDOW_H
