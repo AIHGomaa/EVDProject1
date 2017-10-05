@@ -32,3 +32,6 @@ HEADERS += \
 
 FORMS += \
         mainwindow.ui
+
+INCLUDEPATH += "C:\opencv-3.3\opencv\build\install\include"
+LIBS += "C:\opencv-3.3\opencv\build\install\x86\mingw\bin\libopencv*.dll"
