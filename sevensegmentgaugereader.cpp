@@ -49,23 +49,80 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     Mat cannyEdges(IMG_SIZE, CV_8UC1, 1);
     Canny(src, cannyEdges, cannyThreshold1, cannyThreshold2, 3, true);
 
-
     Mat dilated;
     Mat kernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
     //Mat element = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
     //     morphologyEx(srcCanny,srcCanny, MORPH_CLOSE, kernel);
     dilate(cannyEdges, dilated, kernel);
 
+    dilated.copyTo(dst);
 
+    // Only for test
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("SegmentImage: src", src);
+    imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
+    //    imageAnalizer.showImage("SegmentImage: labeledContours", labeledContours);
+    imageAnalizer.showImage("SegmentImage: dilated", dilated);
+}
 
-    Mat labeledContours = Mat::zeros(IMG_SIZE, CV_8UC3);
+ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
+{
+    //-----------------------------------
+    // Correct rotation
+    //-----------------------------------
+    // Derived from http://felix.abecassis.me/2011/09/opencv-detect-skew-angle/
+    std::vector<cv::Vec4i> lines;
+    cv::HoughLinesP(src, lines, houghDistanceResolution, houghAngleResolutionDegrees * CV_PI/180.0, houghVotesThreshold, src.cols * houghMinLineLengthFactor, houghMaxLineGap);
+
+    cv::Mat disp_lines(IMG_SIZE, CV_8UC1, cv::Scalar(0, 0, 0));
+    double angleRad;
+    unsigned nLines = lines.size();
+
+    // RQ18: +/- 20 degrees must be corrected. We take +/-45 degrees.
+    double maxRotationRad = 45 * CV_PI/180.0;
+    vector<double> angles;
+    for (unsigned i = 0; i < nLines; ++i)
+    {
+        angleRad = atan2((double)lines[i][3] - lines[i][1], (double)lines[i][2] - lines[i][0]);
+
+        if (abs(angleRad) > maxRotationRad)
+            continue;
+
+        line(disp_lines, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), cv::Scalar(255, 0 ,0));
+        angles.push_back (angleRad);
+    }
+
+    double medianAngleRad = median(angles);
+    double medianAngleDegr = medianAngleRad * 180.0 / CV_PI;
+
+    std::cout << "mean angle: " << medianAngleRad << "rad, " << medianAngleDegr << "degr" << std::endl;
+
+    //    cv::destroyWindow(filename);
+
+    Mat rotationCorrected(IMG_SIZE, CV_8UC1);
+    //TODO: configurable
+    if(abs(medianAngleDegr) > 0.5)
+    {
+        // Derived from https://stackoverflow.com/questions/2289690/opencv-how-to-rotate-iplimage
+        Point2f centerPoint(src.cols/2.0F, src.rows/2.0F);
+        Mat rotationMatrix = getRotationMatrix2D(centerPoint, medianAngleDegr, 1.0);
+        warpAffine(src, rotationCorrected, rotationMatrix, src.size());
+    }
+    else
+    {
+        src.copyTo(rotationCorrected);
+    }
+    //-----------------------------------
+    // Label segments
+    //-----------------------------------
+    //Mat labeledContours = Mat::zeros(IMG_SIZE, CV_8UC3);
 
     // Derived from https://docs.opencv.org/trunk/d6/d6e/group__imgproc__draw.html#ga746c0625f1781f1ffc9056259103edbc
-    vector<vector<Point> > contours;
+    vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    findContours(cannyEdges, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+    findContours(rotationCorrected, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
 
-    vector<vector<Point> > contours_poly( contours.size() );
+    vector<vector<Point>> contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
 
     // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
@@ -76,11 +133,10 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     }
 
     int x=1;
-    Mat srcWithRectangles;
-    src.copyTo(srcWithRectangles);
-    cvtColor(srcWithRectangles, srcWithRectangles, COLOR_GRAY2RGB);
+    Mat markedDigits;
+    cvtColor(rotationCorrected, markedDigits, COLOR_GRAY2RGB);
 
-    Mat drawing(srcWithRectangles);
+    Mat drawing(markedDigits);
     for( int i = 0; i< contours.size(); i++ )
     {
         Rect rect = boundRect[i];
@@ -88,7 +144,6 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
         Scalar color = Scalar(0,255,0);
         int width = rect.width;
         int height = rect.height;
-        //         int antal = contours[i].size();
 
         if(height>2 && height < 150 && width>1 && width < 150)
             //if(height>2 && width>1)
@@ -110,19 +165,27 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     //        drawContours( labeledContours, contours, idx, color, FILLED, 8, hierarchy );
     //    }
 
-    srcWithRectangles.copyTo(dst);
+
+    ImageObject * result = new ImageObject();
 
     // Only for test
     imageAnalizer.resetNextWindowPosition();
-    imageAnalizer.showImage("SegmentImage: src", src);
-    imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
-    //    imageAnalizer.showImage("SegmentImage: labeledContours", labeledContours);
-    imageAnalizer.showImage("SegmentImage: srcWithRectangles", srcWithRectangles);
+    imageAnalizer.showImage("disp_lines", disp_lines);
+    imageAnalizer.showImage("rotationCorrected", rotationCorrected);
+    imageAnalizer.showImage("SegmentImage: markedDigits", markedDigits);
+
+    return result;
 }
 
-ImageObject *SevenSegmentGaugeReader::ExtractFeatures(Mat src)
+// Derived from https://stackoverflow.com/questions/2114797/compute-median-of-values-stored-in-vector-c
+double SevenSegmentGaugeReader::median(vector<double> collection)
 {
-    throw Exception();
+    size_t size = collection.size();
+    sort(collection.begin(), collection.end());
+    if (size  % 2 == 0)
+        return (collection[size / 2 - 1] + collection[size / 2]) / 2;
+    else
+        return collection[size / 2];
 }
 
 ReaderResult SevenSegmentGaugeReader::Classify(ImageObject *features)

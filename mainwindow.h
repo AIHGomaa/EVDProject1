@@ -39,6 +39,16 @@ private slots:
 
     void on_spnSegmentationDilateKernelSize_valueChanged();
 
+    void on_spnFeatureExtractionHoughDistanceResolution_valueChanged();
+
+    void on_spnFeatureExtractionHoughAngleResolution_valueChanged();
+
+    void on_spnFeatureExtractionHoughVotesThreshold_valueChanged();
+
+    void on_spnFeatureExtractionHoughMaxLineGap_valueChanged();
+
+    void on_spnFeatureExtractionHoughMinLineLengthFactor_valueChanged();
+
 private:
     Ui::MainWindow *ui;
     // Reference image folder in project working directory

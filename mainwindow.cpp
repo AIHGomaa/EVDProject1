@@ -38,9 +38,16 @@ void MainWindow::configGaugeReader()
     gr->adaptiveThresholdBlockSize = ui->spnEnhancementadaptiveThresholdBlockSize->value();
     gr->adaptivethresholdC = ui->spnEnhancementadaptivethresholdC->value();
     gr->gaussianBlurSize = ui->spnEnhancementGaussianKernelSize->value();
+
     gr->cannyThreshold1 = ui->spnSegmentationCannyThreshold1->value();
     gr->cannyThreshold2 = ui->spnSegmentationCannyThreshold2->value();
     gr->dilateKernelSize = ui->spnSegmentationDilateKernelSize->value();
+
+    gr->houghDistanceResolution = ui->spnFeatureExtractionHoughDistanceResolution->value();
+    gr->houghAngleResolutionDegrees = ui->spnFeatureExtractionHoughAngleResolution->value();
+    gr->houghVotesThreshold = ui->spnFeatureExtractionHoughVotesThreshold->value();
+    gr->houghMaxLineGap = ui->spnFeatureExtractionHoughMaxLineGap->value();
+    gr->houghMinLineLengthFactor = ui->spnFeatureExtractionHoughMinLineLengthFactor->value();
 }
 
 void MainWindow::on_btnReadImageValue_clicked()
@@ -63,6 +70,7 @@ void MainWindow::on_btnReadImageValue_clicked()
     configGaugeReader();
     gaugeReader->EnhanceImage(src, enhanced);
     gaugeReader->SegmentImage(enhanced, segmented);
+    gaugeReader->ExtractFeatures(segmented);
 
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("MainWindow: Original image", src);
@@ -96,6 +104,31 @@ void MainWindow::on_spnSegmentationCannyThreshold2_valueChanged()
 }
 
 void MainWindow::on_spnSegmentationDilateKernelSize_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnFeatureExtractionHoughDistanceResolution_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnFeatureExtractionHoughAngleResolution_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnFeatureExtractionHoughVotesThreshold_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnFeatureExtractionHoughMaxLineGap_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnFeatureExtractionHoughMinLineLengthFactor_valueChanged()
 {
     on_btnReadImageValue_clicked();
 }
