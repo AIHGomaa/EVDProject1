@@ -3,10 +3,9 @@
 #include "QDirIterator"
 #include "QDebug"
 #include "QMessageBox"
+#include "sevensegmentgaugereader.h"
 
-
-//Plaats de foto map in dropbox ergens local om te verwerken
-QString directory = "F:\\QT\\Project1\\afbeeldingen\\";
+using namespace cv;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -14,8 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-
-    QDirIterator it(directory, QDirIterator::Subdirectories);
+    QDirIterator it(imageDir, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         qDebug() << it.next();
         QString filename = it.fileName();
@@ -23,43 +21,81 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->FotoCombobox->addItem(filename);
         }
     }
+
+    gaugeReader = new SevenSegmentGaugeReader();
+    imageAnalizer = ImageAnalizer();
+
 }
-
-using namespace cv;
-
-
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
-void MainWindow::showImage(const char *winname, const Mat img, int x, int y)
+void MainWindow::configGaugeReader()
 {
-    namedWindow(winname, CV_WINDOW_AUTOSIZE);
-    moveWindow(winname, x, y);
-    imshow(winname, img);
+    SevenSegmentGaugeReader* gr = ((SevenSegmentGaugeReader*)gaugeReader);
+    gr->adaptiveThresholdBlockSize = ui->spnEnhancementadaptiveThresholdBlockSize->value();
+    gr->adaptivethresholdC = ui->spnEnhancementadaptivethresholdC->value();
+    gr->gaussianBlurSize = ui->spnEnhancementGaussianKernelSize->value();
+    gr->cannyThreshold1 = ui->spnSegmentationCannyThreshold1->value();
+    gr->cannyThreshold2 = ui->spnSegmentationCannyThreshold2->value();
+    gr->dilateKernelSize = ui->spnSegmentationDilateKernelSize->value();
 }
 
-void MainWindow::showImage(const char *winname, const Mat img, int position)
-{
-    showImage(winname, img, (position % 4) * 200, (position / 4) * 100);
-}
-
-void MainWindow::on_FotoVerwerk_clicked()
+void MainWindow::on_btnReadImageValue_clicked()
 {
     QString filename = ui->FotoCombobox->currentText();
     //QMessageBox::information(this, "Item Selection", filename);
-    QString path = QString(directory + filename);
-   // QMessageBox::information(this, "Path is", path);
-    Mat src;
-    src = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);
-    if(!src.data){
-        ui->statusBar->showMessage(QString("could not open image"), 0);
-    }
-    else
-    {
-        showImage("Original image", src, 200, 200);
+    QString path = QString(imageDir + filename);
+    //QMessageBox::information(this, "Path is", path);
+    Mat src = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);
 
+    if(!src.data){
+        ui->statusBar->showMessage(QString("could not open image " + path), 0);
+        return;
     }
+
+    Size imgSize(src.cols, src.rows);
+    Mat enhanced(imgSize, CV_8UC1);
+    Mat segmented(imgSize, CV_8UC3);
+
+    configGaugeReader();
+    gaugeReader->EnhanceImage(src, enhanced);
+    gaugeReader->SegmentImage(enhanced, segmented);
+
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("MainWindow: Original image", src);
+    imageAnalizer.showImage("MainWindow: Enhanced image", enhanced);
+    imageAnalizer.showImage("MainWindow: Segmented image", segmented);
+}
+
+void MainWindow::on_spnEnhancementadaptiveThresholdBlockSize_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnEnhancementadaptivethresholdC_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnEnhancementGaussianKernelSize_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnSegmentationCannyThreshold1_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnSegmentationCannyThreshold2_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnSegmentationDilateKernelSize_valueChanged()
+{
+    on_btnReadImageValue_clicked();
 }

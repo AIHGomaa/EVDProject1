@@ -2,14 +2,19 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "opencv/cv.h"
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
-
-using namespace cv;
+#include "igaugereader.h"
+#include "sevensegmentgaugereader.h"
+#include "imageanalizer.h"
 
 namespace Ui {
 class MainWindow;
 }
+
+using namespace cv;
+using namespace std;
 
 class MainWindow : public QMainWindow
 {
@@ -20,12 +25,28 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_FotoVerwerk_clicked();
+    void on_btnReadImageValue_clicked();
+
+    void on_spnEnhancementadaptiveThresholdBlockSize_valueChanged();
+
+    void on_spnEnhancementadaptivethresholdC_valueChanged();
+
+    void on_spnEnhancementGaussianKernelSize_valueChanged();
+
+    void on_spnSegmentationCannyThreshold1_valueChanged();
+
+    void on_spnSegmentationCannyThreshold2_valueChanged();
+
+    void on_spnSegmentationDilateKernelSize_valueChanged();
 
 private:
     Ui::MainWindow *ui;
-    void showImage(const char *winname, const Mat tex, int x, int y);
-    void showImage(const char *winname, const Mat tex, int position);
+    // Reference image folder in project working directory
+    QString imageDir = "referenceImages\\";
+    IGaugeReader *gaugeReader;
+    ImageAnalizer imageAnalizer;
+
+    void configGaugeReader();
 };
 
 #endif // MAINWINDOW_H

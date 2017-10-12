@@ -7,6 +7,9 @@ class ImageObject
 {
 public:
     ImageObject();
+
+    // Object features
+
 };
 
 #endif // IMAGEOBJECT_H

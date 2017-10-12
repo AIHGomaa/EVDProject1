@@ -25,13 +25,25 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    imageobject.cpp \
+    sevensegmentgaugereader.cpp \
+    measureunit.cpp \
+    readerresult.cpp \
+    imageanalizer.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    imageobject.h \
+    sevensegmentgaugereader.h \
+    measureunit.h \
+    readerresult.h \
+    igaugereader.h \
+    imageanalizer.h
 
 FORMS += \
         mainwindow.ui
 
-INCLUDEPATH += "C:\opencv-3.3\opencv\build\install\include"
-LIBS += "C:\opencv-3.3\opencv\build\install\x86\mingw\bin\libopencv*.dll"
+INCLUDEPATH += "c:\opencv-3.3\opencv\build\install\include"
+
+LIBS += "c:\opencv-3.3\opencv\build\install\x86\mingw\bin\libopencv*.dll"
