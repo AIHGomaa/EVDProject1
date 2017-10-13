@@ -49,20 +49,12 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     Mat cannyEdges(IMG_SIZE, CV_8UC1, 1);
     Canny(src, cannyEdges, cannyThreshold1, cannyThreshold2, 3, true);
 
-    Mat dilated;
-    Mat kernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
-    //Mat element = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
-    //     morphologyEx(srcCanny,srcCanny, MORPH_CLOSE, kernel);
-    dilate(cannyEdges, dilated, kernel);
-
-    dilated.copyTo(dst);
+    cannyEdges.copyTo(dst);
 
     // Only for test
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("SegmentImage: src", src);
     imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
-    //    imageAnalizer.showImage("SegmentImage: labeledContours", labeledContours);
-    imageAnalizer.showImage("SegmentImage: dilated", dilated);
 }
 
 ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
@@ -115,12 +107,19 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
     //-----------------------------------
     // Label segments
     //-----------------------------------
+    Mat dilated;
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
+    //Mat element = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
+    //     morphologyEx(srcCanny,srcCanny, MORPH_CLOSE, kernel);
+    dilate(rotationCorrected, dilated, kernel);
+
+
     //Mat labeledContours = Mat::zeros(IMG_SIZE, CV_8UC3);
 
     // Derived from https://docs.opencv.org/trunk/d6/d6e/group__imgproc__draw.html#ga746c0625f1781f1ffc9056259103edbc
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    findContours(rotationCorrected, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+    findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
 
     vector<vector<Point>> contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
@@ -172,6 +171,8 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("disp_lines", disp_lines);
     imageAnalizer.showImage("rotationCorrected", rotationCorrected);
+        imageAnalizer.showImage("SegmentImage: dilated", dilated);
+    //    imageAnalizer.showImage("SegmentImage: labeledContours", labeledContours);
     imageAnalizer.showImage("SegmentImage: markedDigits", markedDigits);
 
     return result;
