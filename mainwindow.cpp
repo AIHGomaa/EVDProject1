@@ -41,13 +41,14 @@ void MainWindow::configGaugeReader()
 
     gr->cannyThreshold1 = ui->spnSegmentationCannyThreshold1->value();
     gr->cannyThreshold2 = ui->spnSegmentationCannyThreshold2->value();
+    gr->cannyAppertureSize = ui->spnSegmentationCannyAppertureSize->value();
     gr->dilateKernelSize = ui->spnSegmentationDilateKernelSize->value();
 
     gr->houghDistanceResolution = ui->spnFeatureExtractionHoughDistanceResolution->value();
     gr->houghAngleResolutionDegrees = ui->spnFeatureExtractionHoughAngleResolution->value();
     gr->houghVotesThreshold = ui->spnFeatureExtractionHoughVotesThreshold->value();
     gr->houghMaxLineGap = ui->spnFeatureExtractionHoughMaxLineGap->value();
-    gr->houghMinLineLengthFactor = ui->spnFeatureExtractionHoughMinLineLengthFactor->value();
+    gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
 }
 
 void MainWindow::on_btnReadImageValue_clicked()
@@ -128,7 +129,12 @@ void MainWindow::on_spnFeatureExtractionHoughMaxLineGap_valueChanged()
     on_btnReadImageValue_clicked();
 }
 
-void MainWindow::on_spnFeatureExtractionHoughMinLineLengthFactor_valueChanged()
+void MainWindow::on_spnFeatureExtractionHoughMinLineLength_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnSegmentationCannyAppertureSize_valueChanged()
 {
     on_btnReadImageValue_clicked();
 }

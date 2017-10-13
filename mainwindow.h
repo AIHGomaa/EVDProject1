@@ -47,7 +47,9 @@ private slots:
 
     void on_spnFeatureExtractionHoughMaxLineGap_valueChanged();
 
-    void on_spnFeatureExtractionHoughMinLineLengthFactor_valueChanged();
+    void on_spnFeatureExtractionHoughMinLineLength_valueChanged();
+
+    void on_spnSegmentationCannyAppertureSize_valueChanged();
 
 private:
     Ui::MainWindow *ui;

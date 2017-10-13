@@ -243,8 +243,8 @@
    <widget class="QLabel" name="label_10">
     <property name="geometry">
      <rect>
-      <x>580</x>
-      <y>60</y>
+      <x>670</x>
+      <y>40</y>
       <width>71</width>
       <height>61</height>
      </rect>
@@ -256,8 +256,8 @@
    <widget class="QLabel" name="label_11">
     <property name="geometry">
      <rect>
-      <x>580</x>
-      <y>120</y>
+      <x>660</x>
+      <y>110</y>
       <width>61</width>
       <height>51</height>
      </rect>
@@ -269,7 +269,7 @@
    <widget class="QLabel" name="label_12">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>530</x>
       <y>130</y>
       <width>111</width>
       <height>16</height>
@@ -282,7 +282,7 @@
    <widget class="QSpinBox" name="spnSegmentationDilateKernelSize">
     <property name="geometry">
      <rect>
-      <x>420</x>
+      <x>530</x>
       <y>150</y>
       <width>42</width>
       <height>22</height>
@@ -343,7 +343,7 @@
      <number>1</number>
     </property>
     <property name="value">
-     <number>20</number>
+     <number>30</number>
     </property>
    </widget>
    <widget class="QLabel" name="label_15">
@@ -362,7 +362,7 @@
    <widget class="QSpinBox" name="spnFeatureExtractionHoughMaxLineGap">
     <property name="geometry">
      <rect>
-      <x>680</x>
+      <x>660</x>
       <y>200</y>
       <width>42</width>
       <height>22</height>
@@ -381,13 +381,13 @@
      <number>1</number>
     </property>
     <property name="value">
-     <number>20</number>
+     <number>10</number>
     </property>
    </widget>
    <widget class="QLabel" name="label_16">
     <property name="geometry">
      <rect>
-      <x>680</x>
+      <x>660</x>
       <y>180</y>
       <width>111</width>
       <height>16</height>
@@ -441,20 +441,26 @@
      <double>1.000000000000000</double>
     </property>
    </widget>
-   <widget class="QDoubleSpinBox" name="spnFeatureExtractionHoughMinLineLengthFactor">
+   <widget class="QDoubleSpinBox" name="spnFeatureExtractionHoughMinLineLength">
     <property name="geometry">
      <rect>
       <x>530</x>
       <y>200</y>
-      <width>62</width>
+      <width>51</width>
       <height>22</height>
      </rect>
     </property>
+    <property name="decimals">
+     <number>0</number>
+    </property>
+    <property name="maximum">
+     <double>800.000000000000000</double>
+    </property>
     <property name="singleStep">
-     <double>0.010000000000000</double>
+     <double>1.000000000000000</double>
     </property>
     <property name="value">
-     <double>0.150000000000000</double>
+     <double>30.000000000000000</double>
     </property>
    </widget>
    <widget class="QLabel" name="label_17">
@@ -467,7 +473,39 @@
      </rect>
     </property>
     <property name="text">
-     <string>Hough min line length factor</string>
+     <string>Hough min line length</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_18">
+    <property name="geometry">
+     <rect>
+      <x>420</x>
+      <y>130</y>
+      <width>111</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Canny apperture size</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spnSegmentationCannyAppertureSize">
+    <property name="geometry">
+     <rect>
+      <x>420</x>
+      <y>150</y>
+      <width>42</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>1</number>
+    </property>
+    <property name="singleStep">
+     <number>2</number>
+    </property>
+    <property name="value">
+     <number>5</number>
     </property>
    </widget>
   </widget>

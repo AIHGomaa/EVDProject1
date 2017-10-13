@@ -21,12 +21,13 @@ public:
 
     int cannyThreshold1 = 200;
     int cannyThreshold2 = 200;
+    int cannyAppertureSize = 3;
     int dilateKernelSize = 3;
 
     double houghDistanceResolution = 1;
     double houghAngleResolutionDegrees = 1;
     int houghVotesThreshold = 100;
-    double houghMinLineLengthFactor = 0.15; // relative to image width
+    double houghMinLineLength = 0.15; // relative to image width
     double houghMaxLineGap = 20;
 
     SevenSegmentGaugeReader();

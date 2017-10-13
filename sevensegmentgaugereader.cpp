@@ -47,7 +47,7 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst)
 void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
 {
     Mat cannyEdges(IMG_SIZE, CV_8UC1, 1);
-    Canny(src, cannyEdges, cannyThreshold1, cannyThreshold2, 3, true);
+    Canny(src, cannyEdges, cannyThreshold1, cannyThreshold2, cannyAppertureSize, true);
 
     cannyEdges.copyTo(dst);
 
@@ -64,7 +64,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
     //-----------------------------------
     // Derived from http://felix.abecassis.me/2011/09/opencv-detect-skew-angle/
     std::vector<cv::Vec4i> lines;
-    cv::HoughLinesP(src, lines, houghDistanceResolution, houghAngleResolutionDegrees * CV_PI/180.0, houghVotesThreshold, src.cols * houghMinLineLengthFactor, houghMaxLineGap);
+    cv::HoughLinesP(src, lines, houghDistanceResolution, houghAngleResolutionDegrees * CV_PI/180.0, houghVotesThreshold, houghMinLineLength, houghMaxLineGap);
 
     cv::Mat disp_lines(IMG_SIZE, CV_8UC1, cv::Scalar(0, 0, 0));
     double angleRad;
@@ -133,7 +133,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
 
     int x=1;
     Mat markedDigits;
-    cvtColor(rotationCorrected, markedDigits, COLOR_GRAY2RGB);
+    cvtColor(dilated, markedDigits, COLOR_GRAY2RGB);
 
     Mat drawing(markedDigits);
     for( int i = 0; i< contours.size(); i++ )
