@@ -148,6 +148,45 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
             //if(height>2 && width>1)
         {
             rectangle( drawing, rect.tl(), rect.br(), color, 2, 8, 0 );
+            /*
+            cv::Mat imageroi = markedDigits(rect);
+
+            std::stringstream ss;
+            ss << i;
+            std::string str = ss.str();
+            const char *cstr = str.c_str();
+
+            std::stringstream s;
+            s << x;
+            std::string str1 = s.str();
+            cv::imwrite(str1 + ".jpg", imageroi);
+
+            //Laat zien iedere contour
+            imshow(str, imageroi);
+
+            Mat roi, sample;
+            resize(imageroi, roi, Size(10, 10));
+
+            roi.reshape(1, 1).convertTo(sample, CV_32F);
+            cv::Mat matCurrentChar(0, 0, CV_32F);
+            try {
+
+                kNearest->findNearest(sample, 1, matCurrentChar);
+
+                float fltCurrentChar = (float)matCurrentChar.at<float>(0, 0);
+
+                char str = char(int(fltCurrentChar));        // ap
+
+                putText(drawing, to_string(str), rect.br(), FONT_HERSHEY_DUPLEX, 1, (0, 255, 255), 3);
+            }
+            catch (cv::Exception & e)
+            {
+                // Code that executes when an exception of type
+                // networkIOException is thrown in the try block
+                // ...
+                // Log error message in the exception object
+
+            }*/
             putText(drawing, to_string(1), boundRect[i].br(),FONT_HERSHEY_DUPLEX, 2, (0, 255, 255), 3);
             x++;
         }
@@ -176,6 +215,37 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
     imageAnalizer.showImage("SegmentImage: markedDigits", markedDigits);
 
     return result;
+}
+//Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
+bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN(){
+    try
+        {
+            Mat samples, responses;
+            for (int i = 0; i < 10; i++) {
+                // deze map kopieren van dropbox \Minor EVD\Project 1\projectdocumentatie\training
+                string path = "F:\\QT\Project1\\training\\" + to_string(i) + "\\3.png";
+                //Mat img2(0, 0, CV_32F);
+                Mat img = imread(path);
+                Mat img2;
+                img.convertTo(img2, CV_32F);
+                responses.push_back(img2);
+
+                Mat roi, sample;
+                resize(img, roi, Size(10, 10));
+
+                roi.reshape(1, 1).convertTo(sample, CV_32F);
+                samples.push_back(sample);
+            }
+
+            kNearest->train(samples, ml::ROW_SAMPLE, responses);
+        }
+        catch (cv::Exception & e)
+        {
+            cerr << e.msg << endl; // output exception message
+        }
+        kNearest->setDefaultK(0);
+
+        return true;
 }
 
 // Derived from https://stackoverflow.com/questions/2114797/compute-median-of-values-stored-in-vector-c

@@ -49,6 +49,10 @@ void MainWindow::configGaugeReader()
     gr->houghVotesThreshold = ui->spnFeatureExtractionHoughVotesThreshold->value();
     gr->houghMaxLineGap = ui->spnFeatureExtractionHoughMaxLineGap->value();
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
+   //bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
+   //if (blnKNNTrainingSuccessful == false) {
+   //        std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl << std::endl;
+   // }
 }
 
 void MainWindow::on_btnReadImageValue_clicked()

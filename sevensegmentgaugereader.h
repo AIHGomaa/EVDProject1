@@ -29,6 +29,7 @@ public:
     int houghVotesThreshold = 100;
     double houghMinLineLength = 0.15; // relative to image width
     double houghMaxLineGap = 20;
+    Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 
     SevenSegmentGaugeReader();
     void EnhanceImage(Mat src, OutputArray dst);
@@ -36,6 +37,7 @@ public:
     ImageObject* ExtractFeatures(Mat src);
     ReaderResult Classify(ImageObject* features);
     ReaderResult ReadGaugeImage(Mat src);
+    bool loadKNNDataAndTrainKNN();
 
     //TODO: in separate class
     double median(vector<double> collection);
