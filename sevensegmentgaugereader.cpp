@@ -35,12 +35,12 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst)
 
     // Only for test
     imageAnalizer.resetNextWindowPosition();
-    //    imageAnalizer.showImage("EnhanceImage: src", src);
-    //    imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
-    //    imageAnalizer.showImage("EnhanceImage: blurred", blurred);
-    //    imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
-    //    imageAnalizer.showImage("EnhanceImage: filteredGaussian", filteredGaussian);
-    //    imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
+        imageAnalizer.showImage("EnhanceImage: src", src);
+        imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
+        imageAnalizer.showImage("EnhanceImage: blurred", blurred);
+        imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
+        imageAnalizer.showImage("EnhanceImage: filteredGaussian", filteredGaussian);
+        imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
 
 }
 
