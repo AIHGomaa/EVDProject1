@@ -49,10 +49,10 @@ void MainWindow::configGaugeReader()
     gr->houghVotesThreshold = ui->spnFeatureExtractionHoughVotesThreshold->value();
     gr->houghMaxLineGap = ui->spnFeatureExtractionHoughMaxLineGap->value();
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
-   //bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
-   //if (blnKNNTrainingSuccessful == false) {
-   //        std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl << std::endl;
-   // }
+    bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
+    if (blnKNNTrainingSuccessful == false) {
+            std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl << std::endl;
+    }
 }
 
 void MainWindow::on_btnReadImageValue_clicked()
@@ -75,10 +75,10 @@ void MainWindow::on_btnReadImageValue_clicked()
     configGaugeReader();
     gaugeReader->EnhanceImage(src, enhanced);
     gaugeReader->SegmentImage(enhanced, segmented);
-    gaugeReader->ExtractFeatures(segmented);
+    gaugeReader->ExtractFeatures(segmented, src);
 
     imageAnalizer.resetNextWindowPosition();
-    imageAnalizer.showImage("MainWindow: Original image", src);
+    //imageAnalizer.showImage("MainWindow: Original image", src);
     imageAnalizer.showImage("MainWindow: Enhanced image", enhanced);
     imageAnalizer.showImage("MainWindow: Segmented image", segmented);
 }

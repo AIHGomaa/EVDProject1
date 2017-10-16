@@ -34,7 +34,7 @@ public:
     SevenSegmentGaugeReader();
     void EnhanceImage(Mat src, OutputArray dst);
     void SegmentImage(Mat src, OutputArray dst);
-    ImageObject* ExtractFeatures(Mat src);
+    ImageObject* ExtractFeatures(Mat src, Mat srcOriginal);
     ReaderResult Classify(ImageObject* features);
     ReaderResult ReadGaugeImage(Mat src);
     bool loadKNNDataAndTrainKNN();
