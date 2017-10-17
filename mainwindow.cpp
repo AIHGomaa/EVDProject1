@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    QDirIterator it(imageDir, QDirIterator::Subdirectories);
+    QDirIterator it(imageDir + "afbeeldingen\\", QDirIterator::Subdirectories);
     while (it.hasNext()) {
         qDebug() << it.next();
         QString filename = it.fileName();
@@ -49,17 +49,19 @@ void MainWindow::configGaugeReader()
     gr->houghVotesThreshold = ui->spnFeatureExtractionHoughVotesThreshold->value();
     gr->houghMaxLineGap = ui->spnFeatureExtractionHoughMaxLineGap->value();
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
-   //bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
-   //if (blnKNNTrainingSuccessful == false) {
-   //        std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl << std::endl;
-   // }
+    gr->imageDir = imageDir.toStdString();
+
+    bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
+    if (blnKNNTrainingSuccessful == false) {
+            std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl << std::endl;
+    }
 }
 
 void MainWindow::on_btnReadImageValue_clicked()
 {
     QString filename = ui->FotoCombobox->currentText();
     //QMessageBox::information(this, "Item Selection", filename);
-    QString path = QString(imageDir + filename);
+    QString path = QString(imageDir + "afbeeldingen\\" + filename);
     //QMessageBox::information(this, "Path is", path);
     Mat src = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);
 
@@ -75,10 +77,10 @@ void MainWindow::on_btnReadImageValue_clicked()
     configGaugeReader();
     gaugeReader->EnhanceImage(src, enhanced);
     gaugeReader->SegmentImage(enhanced, segmented);
-    gaugeReader->ExtractFeatures(segmented);
+    gaugeReader->ExtractFeatures(segmented, src);
 
     imageAnalizer.resetNextWindowPosition();
-    imageAnalizer.showImage("MainWindow: Original image", src);
+    //imageAnalizer.showImage("MainWindow: Original image", src);
     imageAnalizer.showImage("MainWindow: Enhanced image", enhanced);
     imageAnalizer.showImage("MainWindow: Segmented image", segmented);
 }

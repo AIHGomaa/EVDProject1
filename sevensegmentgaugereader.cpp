@@ -1,5 +1,6 @@
 #include "sevensegmentgaugereader.h"
 #include "mainwindow.h"
+#include <QMessageBox>
 
 SevenSegmentGaugeReader::SevenSegmentGaugeReader()
 {
@@ -57,7 +58,7 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
 }
 
-ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
+ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
 {
     //-----------------------------------
     // Correct rotation
@@ -121,6 +122,18 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
     vector<Vec4i> hierarchy;
     findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
 
+    //Sort contours from left to right
+    struct contour_sorter
+    {
+        bool operator ()(const vector<Point> a, const vector<Point> b)
+        {
+            Rect ra(boundingRect(a));
+            Rect rb(boundingRect(b));
+            return (ra.x < rb.x);
+        }
+    };
+    sort(contours.begin(), contours.end(), contour_sorter());
+
     vector<vector<Point>> contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
 
@@ -131,9 +144,11 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
         boundRect[i] = boundingRect(Mat(contours_poly[i]));
     }
 
-    int x=1;
+    string number;
     Mat markedDigits;
-    cvtColor(dilated, markedDigits, COLOR_GRAY2RGB);
+    resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
+
+    vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
 
     Mat drawing(markedDigits);
     for( int i = 0; i< contours.size(); i++ )
@@ -144,54 +159,38 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
         int width = rect.width;
         int height = rect.height;
 
+
         if(height>2 && height < 150 && width>1 && width < 150)
             //if(height>2 && width>1)
         {
-            rectangle( drawing, rect.tl(), rect.br(), color, 2, 8, 0 );
-            /*
-            cv::Mat imageroi = markedDigits(rect);
-
-            std::stringstream ss;
-            ss << i;
-            std::string str = ss.str();
-            const char *cstr = str.c_str();
-
-            std::stringstream s;
-            s << x;
-            std::string str1 = s.str();
-            cv::imwrite(str1 + ".jpg", imageroi);
-
-            //Laat zien iedere contour
-            imshow(str, imageroi);
-
+            Mat imageroi = markedDigits(rect);
             Mat roi, sample;
-            resize(imageroi, roi, Size(10, 10));
-
+            resize(imageroi, roi, Size(30, 40));
             roi.reshape(1, 1).convertTo(sample, CV_32F);
-            cv::Mat matCurrentChar(0, 0, CV_32F);
-            try {
 
-                kNearest->findNearest(sample, 1, matCurrentChar);
-
-                float fltCurrentChar = (float)matCurrentChar.at<float>(0, 0);
-
-                char str = char(int(fltCurrentChar));        // ap
-
-                putText(drawing, to_string(str), rect.br(), FONT_HERSHEY_DUPLEX, 1, (0, 255, 255), 3);
+            Mat results;
+            float result = kNearest->findNearest(sample, kNearest->getDefaultK(), results);
+            int val = (int)result;
+            string charValue = to_string(val);
+            if (val == 10) {
+                charValue = ".";
             }
-            catch (cv::Exception & e)
-            {
-                // Code that executes when an exception of type
-                // networkIOException is thrown in the try block
-                // ...
-                // Log error message in the exception object
 
-            }*/
-            putText(drawing, to_string(1), boundRect[i].br(),FONT_HERSHEY_DUPLEX, 2, (0, 255, 255), 3);
-            x++;
+            bool found = find(values.begin(), values.end(), charValue) != values.end();
+            if (found == true)
+            {
+                rectangle( drawing, rect.tl(), rect.br(), color, 2, 8, 0 );
+                color = Scalar(255,255,255);
+                putText(drawing, charValue, rect.br(), FONT_HERSHEY_DUPLEX, 1, color, 3);
+                //final number
+                number += charValue;
+            }
         }
     }
-
+    //Show final number
+    QMessageBox msgBox;
+    msgBox.setText(QString::fromStdString(number));
+    msgBox.exec();
 
 
     // iterate through all the top-level contours,
@@ -218,34 +217,63 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src)
 }
 //Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN(){
-    try
-        {
-            Mat samples, responses;
-            for (int i = 0; i < 10; i++) {
-                // deze map kopieren van dropbox \Minor EVD\Project 1\projectdocumentatie\training
-                string path = "F:\\QT\Project1\\training\\" + to_string(i) + "\\3.png";
-                //Mat img2(0, 0, CV_32F);
-                Mat img = imread(path);
-                Mat img2;
-                img.convertTo(img2, CV_32F);
-                responses.push_back(img2);
-
-                Mat roi, sample;
-                resize(img, roi, Size(10, 10));
-
-                roi.reshape(1, 1).convertTo(sample, CV_32F);
-                samples.push_back(sample);
+    Mat samples, responses;
+   for (int i = 0; i < 21; i++) {
+        string path;
+        if (i >= 10) {
+            switch (i)
+            {
+            case 11:
+                path = imageDir + "ImagesNumber\\BottomArrow.png";
+                break;
+            case 12:
+                path = imageDir + "ImagesNumber\\ESC.png";
+                break;
+            case 13:
+                path = imageDir + "ImagesNumber\\KG.png";
+                break;
+            case 14:
+                path = imageDir + "ImagesNumber\\L2.png";
+                break;
+            case 15:
+                path = imageDir + "ImagesNumber\\L3.png";
+                break;
+            case 16:
+                path = imageDir + "ImagesNumber\\L4.png";
+                break;
+            case 17:
+                path = imageDir + "ImagesNumber\\LeftArrow.png";
+                break;
+            case 18:
+                path = imageDir + "ImagesNumber\\LeftArrow2.png";
+                break;
+            case 19:
+                path = imageDir + "ImagesNumber\\RedSquares.png";
+                break;
+            case 20:
+                path = imageDir + "ImagesNumber\\RightArrow.png";
+                break;
+            default:
+                path = imageDir + "ImagesNumber\\punt.png";
+                break;
             }
-
-            kNearest->train(samples, ml::ROW_SAMPLE, responses);
         }
-        catch (cv::Exception & e)
+        else
         {
-            cerr << e.msg << endl; // output exception message
+            path = imageDir + "ImagesNumber\\" + to_string(i) + ".png";
         }
-        kNearest->setDefaultK(0);
+        Mat img = imread(path);
+        responses.push_back(Mat(1, 1, CV_32F, i));
 
-        return true;
+        Mat roi, sample;
+        resize(img, roi, Size(30, 40));
+        roi.reshape(1, 1).convertTo(sample, CV_32F);
+        samples.push_back(sample);
+    }
+    kNearest->setDefaultK(1);
+    kNearest->train(samples, ml::ROW_SAMPLE, responses);
+
+    return true;
 }
 
 // Derived from https://stackoverflow.com/questions/2114797/compute-median-of-values-stored-in-vector-c

@@ -23,6 +23,7 @@ public:
     int cannyThreshold2 = 200;
     int cannyAppertureSize = 3;
     int dilateKernelSize = 3;
+    string imageDir;
 
     double houghDistanceResolution = 1;
     double houghAngleResolutionDegrees = 1;
@@ -34,7 +35,7 @@ public:
     SevenSegmentGaugeReader();
     void EnhanceImage(Mat src, OutputArray dst);
     void SegmentImage(Mat src, OutputArray dst);
-    ImageObject* ExtractFeatures(Mat src);
+    ImageObject* ExtractFeatures(Mat src, Mat srcOriginal);
     ReaderResult Classify(ImageObject* features);
     ReaderResult ReadGaugeImage(Mat src);
     bool loadKNNDataAndTrainKNN();
