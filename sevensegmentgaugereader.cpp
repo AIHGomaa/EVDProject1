@@ -1,5 +1,6 @@
 #include "sevensegmentgaugereader.h"
 #include "mainwindow.h"
+#include <QMessageBox>
 
 SevenSegmentGaugeReader::SevenSegmentGaugeReader()
 {
@@ -121,6 +122,18 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     vector<Vec4i> hierarchy;
     findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
 
+    //Sort contours from left to right
+    struct contour_sorter
+    {
+        bool operator ()(const vector<Point> a, const vector<Point> b)
+        {
+            Rect ra(boundingRect(a));
+            Rect rb(boundingRect(b));
+            return (ra.x < rb.x);
+        }
+    };
+    sort(contours.begin(), contours.end(), contour_sorter());
+
     vector<vector<Point>> contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
 
@@ -131,8 +144,11 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
         boundRect[i] = boundingRect(Mat(contours_poly[i]));
     }
 
+    string number;
     Mat markedDigits;
     resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
+
+    vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
 
     Mat drawing(markedDigits);
     for( int i = 0; i< contours.size(); i++ )
@@ -143,7 +159,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
         int width = rect.width;
         int height = rect.height;
 
-        vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
+
         if(height>2 && height < 150 && width>1 && width < 150)
             //if(height>2 && width>1)
         {
@@ -164,12 +180,17 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
             if (found == true)
             {
                 rectangle( drawing, rect.tl(), rect.br(), color, 2, 8, 0 );
-
-                putText(drawing, charValue, rect.br(), FONT_HERSHEY_DUPLEX, 1, (0, 255, 255), 3);
+                color = Scalar(255,255,255);
+                putText(drawing, charValue, rect.br(), FONT_HERSHEY_DUPLEX, 1, color, 3);
+                //final number
+                number += charValue;
             }
         }
     }
-
+    //Show final number
+    QMessageBox msgBox;
+    msgBox.setText(QString::fromStdString(number));
+    msgBox.exec();
 
 
     // iterate through all the top-level contours,
@@ -197,14 +218,49 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
 //Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN(){
     Mat samples, responses;
-    for (int i = 0; i < 10; i++) {
+   for (int i = 0; i < 21; i++) {
         string path;
-        if (i == 10) {
-            path = "F:\\QT\\Project1\\ImagesNumber\\punt.png";
+        if (i >= 10) {
+            switch (i)
+            {
+            case 11:
+                path = imageDir + "ImagesNumber\\BottomArrow.png";
+                break;
+            case 12:
+                path = imageDir + "ImagesNumber\\ESC.png";
+                break;
+            case 13:
+                path = imageDir + "ImagesNumber\\KG.png";
+                break;
+            case 14:
+                path = imageDir + "ImagesNumber\\L2.png";
+                break;
+            case 15:
+                path = imageDir + "ImagesNumber\\L3.png";
+                break;
+            case 16:
+                path = imageDir + "ImagesNumber\\L4.png";
+                break;
+            case 17:
+                path = imageDir + "ImagesNumber\\LeftArrow.png";
+                break;
+            case 18:
+                path = imageDir + "ImagesNumber\\LeftArrow2.png";
+                break;
+            case 19:
+                path = imageDir + "ImagesNumber\\RedSquares.png";
+                break;
+            case 20:
+                path = imageDir + "ImagesNumber\\RightArrow.png";
+                break;
+            default:
+                path = imageDir + "ImagesNumber\\punt.png";
+                break;
+            }
         }
         else
         {
-            path = "F:\\QT\\Project1\\ImagesNumber\\" + to_string(i) + ".png";
+            path = imageDir + "ImagesNumber\\" + to_string(i) + ".png";
         }
         Mat img = imread(path);
         responses.push_back(Mat(1, 1, CV_32F, i));
