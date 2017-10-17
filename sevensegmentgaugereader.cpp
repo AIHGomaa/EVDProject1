@@ -1,6 +1,6 @@
 #include "sevensegmentgaugereader.h"
 #include "mainwindow.h"
-#include <QMessageBox>
+#include "QMessageBox"
 
 SevenSegmentGaugeReader::SevenSegmentGaugeReader()
 {
@@ -36,12 +36,12 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst)
 
     // Only for test
     imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("EnhanceImage: src", src);
-        imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
-        imageAnalizer.showImage("EnhanceImage: blurred", blurred);
-        imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
-        imageAnalizer.showImage("EnhanceImage: filteredGaussian", filteredGaussian);
-        imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
+    imageAnalizer.showImage("EnhanceImage: src", src);
+    imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
+    imageAnalizer.showImage("EnhanceImage: blurred", blurred);
+    imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
+    imageAnalizer.showImage("EnhanceImage: filteredGaussian", filteredGaussian);
+    imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
 
 }
 
@@ -71,7 +71,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     double angleRad;
     unsigned nLines = lines.size();
 
-    // RQ18: +/- 20 degrees must be corrected. We take +/-45 degrees.
+    // R`18: +/- 20 degrees must be corrected. We take +/-45 degrees.
     double maxRotationRad = 45 * CV_PI/180.0;
     vector<double> angles;
     for (unsigned i = 0; i < nLines; ++i)
@@ -99,6 +99,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
         // Derived from https://stackoverflow.com/questions/2289690/opencv-how-to-rotate-iplimage
         Point2f centerPoint(src.cols/2.0F, src.rows/2.0F);
         Mat rotationMatrix = getRotationMatrix2D(centerPoint, medianAngleDegr, 1.0);
+
         warpAffine(src, rotationCorrected, rotationMatrix, src.size());
     }
     else
@@ -209,62 +210,64 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("disp_lines", disp_lines);
     imageAnalizer.showImage("rotationCorrected", rotationCorrected);
-        imageAnalizer.showImage("SegmentImage: dilated", dilated);
+    imageAnalizer.showImage("SegmentImage: dilated", dilated);
     //    imageAnalizer.showImage("SegmentImage: labeledContours", labeledContours);
     imageAnalizer.showImage("SegmentImage: markedDigits", markedDigits);
 
     return result;
 }
+
 //Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
-bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN(){
+bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     Mat samples, responses;
-   for (int i = 0; i < 21; i++) {
+    for (int i = 0; i < 21; i++) {
         string path;
         if (i >= 10) {
             switch (i)
             {
             case 11:
-                path = imageDir + "ImagesNumber\\BottomArrow.png";
+                path = referenceImageDir + "BottomArrow.png";
                 break;
             case 12:
-                path = imageDir + "ImagesNumber\\ESC.png";
+                path = referenceImageDir + "ESC.png";
                 break;
             case 13:
-                path = imageDir + "ImagesNumber\\KG.png";
+                path = referenceImageDir + "KG.png";
                 break;
             case 14:
-                path = imageDir + "ImagesNumber\\L2.png";
+                path = referenceImageDir + "L2.png";
                 break;
             case 15:
-                path = imageDir + "ImagesNumber\\L3.png";
+                path = referenceImageDir + "L3.png";
                 break;
             case 16:
-                path = imageDir + "ImagesNumber\\L4.png";
+                path = referenceImageDir + "L4.png";
                 break;
             case 17:
-                path = imageDir + "ImagesNumber\\LeftArrow.png";
+                path = referenceImageDir + "LeftArrow.png";
                 break;
             case 18:
-                path = imageDir + "ImagesNumber\\LeftArrow2.png";
+                path = referenceImageDir + "LeftArrow2.png";
                 break;
             case 19:
-                path = imageDir + "ImagesNumber\\RedSquares.png";
+                path = referenceImageDir + "RedSquares.png";
                 break;
             case 20:
-                path = imageDir + "ImagesNumber\\RightArrow.png";
+                path = referenceImageDir + "RightArrow.png";
                 break;
             default:
-                path = imageDir + "ImagesNumber\\punt.png";
+                path = referenceImageDir + "Point.png";
                 break;
             }
         }
         else
         {
-            path = imageDir + "ImagesNumber\\" + to_string(i) + ".png";
+            path = referenceImageDir + to_string(i) + ".png";
         }
         Mat img = imread(path);
         responses.push_back(Mat(1, 1, CV_32F, i));
 
+        // convert to single row matrix
         Mat roi, sample;
         resize(img, roi, Size(30, 40));
         roi.reshape(1, 1).convertTo(sample, CV_32F);
@@ -272,6 +275,11 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN(){
     }
     kNearest->setDefaultK(1);
     kNearest->train(samples, ml::ROW_SAMPLE, responses);
+
+    // Only for test
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("samples", samples);
+//    imageAnalizer.showImage("responses", responses);
 
     return true;
 }

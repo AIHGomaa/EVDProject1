@@ -23,7 +23,7 @@ public:
     int cannyThreshold2 = 200;
     int cannyAppertureSize = 3;
     int dilateKernelSize = 3;
-    string imageDir;
+    string referenceImageDir;
 
     double houghDistanceResolution = 1;
     double houghAngleResolutionDegrees = 1;
@@ -43,12 +43,13 @@ public:
     //TODO: in separate class
     double median(vector<double> collection);
 private:
-    //TODO: verhouding van source image behouden
+    //TODO: keep source image aspect ratio
     const int X_RESOLUTION = 480;
     const int Y_RESOLUTION = 640;
     const Size IMG_SIZE = Size(X_RESOLUTION, Y_RESOLUTION);
 
     ImageAnalizer imageAnalizer;
+    int findDigitHeight(Mat src);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H

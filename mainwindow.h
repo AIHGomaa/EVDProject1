@@ -53,8 +53,9 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    // Reference image folder in project working directory
-    QString imageDir = "D:\\QT Projecten\\EVDProject1\\";
+    // image folders in project working directory
+    QString referenceImageDir = "referenceImages\\";
+    QString testImageDir = "testImages\\";
     IGaugeReader *gaugeReader;
     ImageAnalizer imageAnalizer;
 
