@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QComboBox" name="FotoCombobox">
+   <widget class="QComboBox" name="cmbImages">
     <property name="geometry">
      <rect>
       <x>10</x>

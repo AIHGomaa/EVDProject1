@@ -11,6 +11,8 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    qDebug() << "ctor MainWindow";
+
     ui->setupUi(this);
 
     QDirIterator it(testImageDir, QDirIterator::Subdirectories);
@@ -51,6 +53,7 @@ void MainWindow::configGaugeReader()
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
     gr->referenceImageDir = referenceImageDir.toStdString();
 
+    //TODO: training not in main read proces, separate button action, store training data, load training data on start reader.
     bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
     if (blnKNNTrainingSuccessful == false) {
         std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl << std::endl;
@@ -75,6 +78,8 @@ void MainWindow::on_btnReadImageValue_clicked()
     configGaugeReader();
 
     gaugeReader->EnhanceImage(src, enhanced);
+
+    //TODO? na rotatiecorrectie: pre-roi voor contours
 
     gaugeReader->SegmentImage(enhanced, segmented);
     gaugeReader->ExtractFeatures(segmented, src);

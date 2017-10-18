@@ -1,6 +1,7 @@
 #include "sevensegmentgaugereader.h"
 #include "mainwindow.h"
 #include "QMessageBox"
+#include "QDebug"
 
 SevenSegmentGaugeReader::SevenSegmentGaugeReader()
 {
@@ -100,6 +101,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
         Point2f centerPoint(src.cols/2.0F, src.rows/2.0F);
         Mat rotationMatrix = getRotationMatrix2D(centerPoint, medianAngleDegr, 1.0);
 
+        //TODO: rotate earlier version of the image and repeat segmentation (and enhancement) for better contours search
         warpAffine(src, rotationCorrected, rotationMatrix, src.size());
     }
     else
@@ -114,6 +116,9 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     //Mat element = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
     //     morphologyEx(srcCanny,srcCanny, MORPH_CLOSE, kernel);
     dilate(rotationCorrected, dilated, kernel);
+
+
+    Size digitSize = calculateDigitSize(dilated);
 
 
     //Mat labeledContours = Mat::zeros(IMG_SIZE, CV_8UC3);
@@ -139,7 +144,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     vector<Rect> boundRect( contours.size() );
 
     // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
-    for( int i = 0; i < contours.size(); i++ )
+    for( uint i = 0; i < contours.size(); i++ )
     {
         approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
         boundRect[i] = boundingRect(Mat(contours_poly[i]));
@@ -152,7 +157,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
 
     Mat drawing(markedDigits);
-    for( int i = 0; i< contours.size(); i++ )
+    for( uint i = 0; i< contours.size(); i++ )
     {
         Rect rect = boundRect[i];
 
@@ -219,7 +224,8 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
 
 //Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
-    Mat samples, responses;
+    Mat samples;
+    vector<int> responseLabels;
     for (int i = 0; i < 21; i++) {
         string path;
         if (i >= 10) {
@@ -265,7 +271,7 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
             path = referenceImageDir + to_string(i) + ".png";
         }
         Mat img = imread(path);
-        responses.push_back(Mat(1, 1, CV_32F, i));
+        responseLabels.push_back(i);
 
         // convert to single row matrix
         Mat roi, sample;
@@ -274,12 +280,11 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
         samples.push_back(sample);
     }
     kNearest->setDefaultK(1);
-    kNearest->train(samples, ml::ROW_SAMPLE, responses);
+    kNearest->train(samples, ml::ROW_SAMPLE, responseLabels);
 
     // Only for test
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("samples", samples);
-//    imageAnalizer.showImage("responses", responses);
 
     return true;
 }
@@ -303,4 +308,161 @@ ReaderResult SevenSegmentGaugeReader::Classify(ImageObject *features)
 ReaderResult SevenSegmentGaugeReader::ReadGaugeImage(Mat src)
 {
     throw Exception();
+}
+
+Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName)
+{
+    Mat dst = imread(referenceImageDir + fileName, CV_LOAD_IMAGE_GRAYSCALE); // _COLOR);
+    if(!dst.data)
+        throw Exception(0, "Could not load image", "loadReferenceImage", "SevenSegmentGaugeReader.cpp", 0);
+
+    return dst;
+}
+
+Size SevenSegmentGaugeReader::calculateDigitSize(Mat img)
+{
+    return Size(0, 0);
+
+    // TODO: performance
+
+
+    // Only for test
+    int maskSizeTestCounter = 0;
+    int imageRowTestCounter = 0;
+    int imageColTestCounter = 0;
+    int maskRowTestCounter = 0;
+    int maskColTestCounter = 0;
+    //
+
+    Mat maskDigit8pSrc = loadReferenceImage("MaskDigit8_SegmentP.png");
+    Mat maskSegmentBcSrc = loadReferenceImage("MaskSegmentBC.png");
+    Mat maskSegmentAgdSrc = loadReferenceImage("MaskSegmentAGD.png");
+    Mat maskDigit8p, maskSegmentBc, maskSegmentAgd;
+
+    double outsideMaskTolerance = 0.1;
+    double misingInMaskTolerance = 0.1;
+
+    int maskHStepSize = 1;
+    double maskAspectRatio = maskDigit8pSrc.cols / (double)maskDigit8pSrc.rows;
+
+    //TODO: values based on requirements
+    int minMaskH = (int)(img.rows / 24.0 + 0.5);
+    int maxMaskH = (int)(img.rows / 16.0 + 0.5);
+
+    qDebug() << "maskAspectRatio " << maskAspectRatio;
+    qDebug() << "minMaskH " << minMaskH;
+    qDebug() << "maxMaskH " << maxMaskH;
+
+    int maskW, maskH;
+    bool isMatch = false;
+
+    //TODO: start with most likely size and most likely position
+    // Iterate over mask sizes
+    for (maskH = minMaskH; maskH < maxMaskH && !isMatch; maskH += maskHStepSize) {
+        // Only for test
+        maskSizeTestCounter++;
+        //
+
+        maskW = (int)(maskH * maskAspectRatio + 0.5);
+
+        qDebug() << "maskW " << maskW;
+        qDebug() << "maskH " << maskH;
+
+        resize(maskDigit8pSrc, maskDigit8p, Size(maskW, maskH));
+        resize(maskSegmentBcSrc, maskSegmentBc, Size(maskW, maskH));
+        resize(maskSegmentAgdSrc, maskSegmentAgd, Size(maskW, maskH));
+
+        // TODO: configurable
+        int colStart = (int)(img.cols * 1 / 8.0 + 0.5);
+        int colEnd = img.cols - colStart - maskW;
+        int rowStart = (int)(img.rows * 1 / 3.0 + 0.5);
+        int rowEnd = img.rows - rowStart - maskH;
+        int maskMoveStepSize = 1;
+        int samplingStepSize = 1;
+
+        qDebug() << "colStart " << colStart;
+        qDebug() << "colEnd " << colEnd;
+        qDebug() << "rowStart " << rowStart;
+        qDebug() << "rowEnd " << rowEnd;
+
+
+        int objectPixelsOutsideMask = 0;
+        int objectPixelsMissingInMask = 0;
+        int maxObjectPixelsOutsideMask = (int)(maskW * maskH * outsideMaskTolerance + 0.5);
+        int maxObjectPixelsMissingInMask = (int)(maskW * maskH * misingInMaskTolerance + 0.5);
+
+        // Iterate over image rows and cols
+        for (int imgRow = rowStart; imgRow < rowEnd && !isMatch; imgRow += maskMoveStepSize)
+        {
+            // Only for test
+            imageRowTestCounter++;
+            //
+
+            for (int imgCol = colStart; imgCol < colEnd && !isMatch; imgCol++)
+            {
+                // Only for test
+                imageColTestCounter++;
+                //
+
+                bool canMatch = true;
+                // iterate over mask rows and cols
+                for (int maskRow = 0; maskRow < maskH && canMatch; maskRow += samplingStepSize)
+                {
+                    // Only for test
+                    maskRowTestCounter++;
+                    qDebug() << "maskW " << maskW;
+                    qDebug() << "maskH " << maskH;
+                    //
+
+                    for (int maskCol = 0; maskCol < maskW && canMatch; maskCol += samplingStepSize)
+                    {
+                        // Only for test
+                        maskColTestCounter++;
+                        qDebug() << "maskW " << maskW;
+                        qDebug() << "maskH " << maskH;
+                        //
+
+                        uchar imgPixel = maskDigit8pSrc.at<uchar>(imgRow + maskRow, imgCol + maskCol);
+                        uchar maskDigit8pPixel = maskDigit8pSrc.at<uchar>(maskRow, maskCol);
+                        uchar maskSegmentBcPixel = maskSegmentBcSrc.at<uchar>(maskRow, maskCol);
+                        uchar maskSegmentAgdPixel = maskSegmentAgdSrc.at<uchar>(maskRow, maskCol);
+                        // Pixels outside mask pattern shoud be 0.
+                        if ((imgPixel & maskDigit8pPixel) != imgPixel)
+                            objectPixelsOutsideMask++;
+                        // Pixels within mask pattern should entirely fill segment B and C or segment A and G and D,
+                        // because 7-segment digits 0...9 match at least 1 of these masks.
+                        else if ((imgPixel & maskSegmentBcPixel) != maskSegmentBcPixel &&
+                                 (imgPixel & maskSegmentAgdPixel) != maskSegmentAgdPixel)
+                            objectPixelsMissingInMask++;
+
+                        if (objectPixelsOutsideMask > maxObjectPixelsOutsideMask ||
+                                objectPixelsMissingInMask > maxObjectPixelsMissingInMask)
+                            canMatch = false;
+                    }
+                }
+                isMatch = canMatch;
+            }
+        }
+    }
+
+    // TEST
+    qDebug() << "maskSizeTestCounter: " << maskSizeTestCounter;
+    qDebug() << "imageRowTestCounter: " << imageRowTestCounter;
+    qDebug() << "imageColTestCounter: " << imageColTestCounter;
+    qDebug() << "maskRowTestCounter: " << maskRowTestCounter;
+    qDebug() << "maskColTestCounter: " << maskColTestCounter;
+
+    if (isMatch)
+    {
+        qDebug() << "digit size: " << maskW << "*" << maskH;
+
+        return Size(maskW, maskH);
+    }
+    else
+    {
+        qDebug() << "No digits recognized";
+
+        return Size(0, 0);
+        //throw Exception(0, "No digits recognized", "calculateDigitSize", "SevenSegmentGaugeReader.cpp", 0);
+    }
 }

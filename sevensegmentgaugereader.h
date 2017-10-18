@@ -49,7 +49,8 @@ private:
     const Size IMG_SIZE = Size(X_RESOLUTION, Y_RESOLUTION);
 
     ImageAnalizer imageAnalizer;
-    int findDigitHeight(Mat src);
+    Size calculateDigitSize(Mat src);
+    Mat loadReferenceImage(string fileName);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
