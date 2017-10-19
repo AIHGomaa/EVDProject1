@@ -50,6 +50,8 @@ private:
 
     ImageAnalizer imageAnalizer;
     Size calculateDigitSize(Mat src);
+    Mat berekenDigitAlgorithm(Mat src);
+    vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
 };
 

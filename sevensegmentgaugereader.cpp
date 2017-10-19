@@ -118,7 +118,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
     dilate(rotationCorrected, dilated, kernel);
 
 
-    Size digitSize = calculateDigitSize(dilated);
+    //Size digitSize = calculateDigitSize(dilated);
 
 
     //Mat labeledContours = Mat::zeros(IMG_SIZE, CV_8UC3);
@@ -150,8 +150,9 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat src, Mat srcOriginal)
         boundRect[i] = boundingRect(Mat(contours_poly[i]));
     }
 
+
     string number;
-    Mat markedDigits;
+    Mat markedDigits;// = berekenDigitAlgorithm(dilated);
     resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
 
     vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
@@ -317,6 +318,146 @@ Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName)
         throw Exception(0, "Could not load image", "loadReferenceImage", "SevenSegmentGaugeReader.cpp", 0);
 
     return dst;
+}
+
+Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
+
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+
+    //Sort contours from left to right
+    struct contour_sorter
+    {
+        bool operator ()(const vector<Point> a, const vector<Point> b)
+        {
+            Rect ra(boundingRect(a));
+            Rect rb(boundingRect(b));
+            return (ra.x < rb.x);
+        }
+    };
+    sort(contours.begin(), contours.end(), contour_sorter());
+
+    vector<vector<Point>> contours_poly( contours.size() );
+    vector<Rect> boundRect( contours.size() );
+
+    // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
+    for( uint i = 0; i < contours.size(); i++ )
+    {
+        approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
+        boundRect[i] = boundingRect(Mat(contours_poly[i]));
+    }
+    Mat markedDigits;
+    dilated.copyTo(markedDigits);
+
+    Mat drawing(markedDigits);
+
+    //Masker derived from https://www.pyimagesearch.com/2017/02/13/recognizing-digits-with-opencv-and-python/
+    map<vector<int>, int> DIGITS_LOOKUP;
+    vector<int> zero { 1, 1, 1, 0, 1, 1, 1 }; DIGITS_LOOKUP[zero] = 1;
+    vector<int> one{ 0, 0, 1, 0, 0, 1, 0 }; DIGITS_LOOKUP[one] = 2;
+    vector<int> two{ 1, 0, 1, 1, 1, 0, 1 }; DIGITS_LOOKUP[two] = 3;
+    vector<int> three{ 1, 0, 1, 1, 0, 1, 1 }; DIGITS_LOOKUP[three] = 4;
+    vector<int> four{ 0, 1, 1, 1, 0, 1, 0 }; DIGITS_LOOKUP[four] = 5;
+    vector<int> five{ 1, 1, 0, 1, 0, 1, 1 }; DIGITS_LOOKUP[five] = 6;
+    vector<int> six{ 1, 1, 0, 1, 1, 1, 1 }; DIGITS_LOOKUP[six] = 7;
+    vector<int> seven{ 1, 0, 1, 0, 0, 1, 0 }; DIGITS_LOOKUP[seven] = 8;
+    vector<int> eight{ 1, 1, 1, 1, 1, 1, 1 }; DIGITS_LOOKUP[eight] = 9;
+    vector<int> nine{ 1, 1, 1, 1, 0, 1, 1 }; DIGITS_LOOKUP[nine] = 10;
+
+    string digits = "";
+
+    for (int i = 0; i< contours.size(); i++)
+    {
+         Rect rect = boundRect[i];
+         int width = rect.width;
+         int height = rect.height;
+
+        if (height>20 && height < 80 && width>20 && width < 80)
+        //	if(height>2 && width>1)
+        {
+            Mat roiTest = markedDigits(rect);
+
+            int w = rect.width;
+            int h = rect.height;
+            int roiH = roiTest.rows;
+            int roiW = roiTest.cols;
+            int dW = int(roiW * 0.25);
+            int dH = int(roiH * 0.15);
+            int dHC = int(roiH * 0.05);
+
+            //# define the set of 7 segments
+            vector<vector<Point2d>> segments;
+            vector<Point2d> segment0 = getPoint(Point2d(10, 0), Point2d(w - 10, dH)); // top										0
+            vector<Point2d> segment1 = getPoint(Point2d(10, 0), Point2d(dW + 10, h / 2)); // top left								1
+            vector<Point2d> segment2 = getPoint(Point2d(w - dW, 0), Point2d(w, h / 2)); // top right								2
+            vector<Point2d> segment3 = getPoint(Point2d(5, (h / 2) - (dHC + 2)), Point2d(w - 5, (h / 2) + (dHC + 2))); // center	3
+            vector<Point2d> segment4 = getPoint(Point2d(0, h / 2), Point2d(dW, h)); // bottom left									4
+            vector<Point2d> segment5 = getPoint(Point2d(w - dW - 5, h / 2), Point2d(w - 5, h)); // bottom right						5
+            vector<Point2d> segment6 = getPoint(Point2d(0, h - dH), Point2d(w - 5, h)); // bottom									6
+            segments.push_back(segment0);
+            segments.push_back(segment1);
+            segments.push_back(segment2);
+            segments.push_back(segment3);
+            segments.push_back(segment4);
+            segments.push_back(segment5);
+            segments.push_back(segment6);
+
+            Mat element = getStructuringElement(MORPH_RECT, Size(2, 2));
+            dilate(roiTest, roiTest, element);
+
+            vector<int> on = { 0, 0, 0, 0, 0, 0, 0 };
+            int i1 = 0;
+            for (auto& seg : segments) {
+                try
+                {
+                    Point2d p1 = seg[0];
+                    Point2d p2 = seg[1];
+                    Rect rect2(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+                    Mat segROI = roiTest(rect2);// [yA:yB, xA : xB]
+                    int	total = countNonZero(segROI);
+                    double area = (p2.x - p1.x) * (p2.y - p1.y);
+                    double v = total / area;
+                    if (v > 0.5) {
+                        on[i1] = 1;
+                    }
+                }
+                catch (cv::Exception & e)
+                {
+                    cerr << e.msg << endl; // output exception message
+                }
+
+                i1++;
+            }
+
+            int digit = DIGITS_LOOKUP[on];
+            if (digit > 0) {
+
+                digit = digit - 1;
+                Scalar color = Scalar(255, 255, 255);
+
+                rectangle(drawing, rect.tl(), rect.br(), color, 2, 8, 0);
+                putText(drawing, to_string(digit), rect.br(), FONT_HERSHEY_DUPLEX, 1, color, 3);
+
+                digits += digit;
+            }
+        }
+    }
+    if(digits != ""){
+        QMessageBox msgBox;
+        msgBox.setText(QString::fromStdString(digits));
+        msgBox.exec();
+    }
+    imshow("Box", markedDigits);
+
+    return markedDigits;
+}
+
+vector<Point2d> SevenSegmentGaugeReader::getPoint(Point2d p1 , Point2d p2) {
+    vector<Point2d> segment;
+    segment.push_back(p1);
+    segment.push_back(p2);
+    return segment;
 }
 
 Size SevenSegmentGaugeReader::calculateDigitSize(Mat img)
