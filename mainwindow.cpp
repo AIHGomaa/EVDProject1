@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent) :
         qDebug() << it.next();
         QString filename = it.fileName();
         if(filename.length() > 5){
-            ui->FotoCombobox->addItem(filename);
+            ui->cmbImages->addItem(filename);
         }
     }
 
@@ -62,7 +62,7 @@ void MainWindow::configGaugeReader()
 
 void MainWindow::on_btnReadImageValue_clicked()
 {
-    QString filename = ui->FotoCombobox->currentText();
+    QString filename = ui->cmbImages->currentText();
     QString path = QString(testImageDir + filename);
     Mat src = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);
 
