@@ -36,7 +36,7 @@ public:
     void EnhanceImage(Mat src, OutputArray dst);
     void SegmentImage(Mat src, OutputArray dst);
     ImageObject* ExtractFeatures(Mat src, Mat srcOriginal);
-    ReaderResult Classify(ImageObject* features);
+    ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal);
     ReaderResult ReadGaugeImage(Mat src);
     bool loadKNNDataAndTrainKNN();
 
