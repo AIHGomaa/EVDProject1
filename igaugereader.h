@@ -19,7 +19,7 @@ public:
 //    virtual Mat EnhanceImage(Mat src) = 0;
     virtual void EnhanceImage(Mat src, OutputArray dst) = 0;
     virtual void SegmentImage(Mat src, OutputArray dst) = 0;
-    virtual ImageObject* ExtractFeatures(Mat src, Mat srcOriginal) = 0;
+    virtual ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal) = 0;
     virtual ReaderResult Classify(ImageObject* features) = 0;
     virtual ReaderResult ReadGaugeImage(Mat src) = 0;
     virtual bool loadKNNDataAndTrainKNN() = 0;
