@@ -14,16 +14,6 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QComboBox" name="cmbImages">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>231</width>
-      <height>22</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QPushButton" name="btnReadImageValue">
     <property name="geometry">
      <rect>
@@ -482,17 +472,14 @@
      <number>5</number>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnReadImageValue_2">
+   <widget class="QComboBox" name="cmbTestImages">
     <property name="geometry">
      <rect>
-      <x>410</x>
+      <x>20</x>
       <y>30</y>
-      <width>131</width>
-      <height>23</height>
+      <width>191</width>
+      <height>22</height>
      </rect>
-    </property>
-    <property name="text">
-     <string>Create reference digit</string>
     </property>
    </widget>
   </widget>

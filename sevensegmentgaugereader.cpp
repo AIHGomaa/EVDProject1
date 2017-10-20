@@ -62,6 +62,11 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
 // TODO: use enhanced instead of srcOriginal?
 ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal)
 {
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("ExtractFeatures: edges", edges);
+    imageAnalizer.showImage("ExtractFeatures: enhancedImage", enhancedImage);
+    imageAnalizer.showImage("ExtractFeatures: srcOriginal", srcOriginal);
+
     //-----------------------------------
     // Correct rotation
     //-----------------------------------
@@ -121,9 +126,6 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
 //        morphologyEx(srcCanny, srcCanny, MORPH_CLOSE, kernel);
         morphologyEx(thresAfterRotate, reEnhancedAfterWarp, MORPH_OPEN, kernel);
 
-        //TODO? was done for edges version of rotationCorrected
-        //dilate(rotationCorrected, dilated, kernel);
-
         // Only for test
         imageAnalizer.resetNextWindowPosition();
         imageAnalizer.showImage("Feature extract: disp_lines", disp_lines);
@@ -134,12 +136,23 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     {
         enhancedImage.copyTo(reEnhancedAfterWarp);
     }
+
+    //TODO: choose the best option and cleanup
+    //-----------------------------------
+    // Create some variants of enhanced/ reEnhanced image for experiments.
+    //-----------------------------------
+    Mat reEnhancedAfterWarpInverted;
+    bitwise_not(reEnhancedAfterWarp, reEnhancedAfterWarpInverted);
+    Mat dilatedEdges;
+    Mat dilateKernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
+    dilate(edges, dilatedEdges, dilateKernel);
+
     //-----------------------------------
     // Label segments
     //-----------------------------------
 
-    imageAnalizer.showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
-
+    imageAnalizer.showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarpInverted);
+    imageAnalizer.showImage("ExtractFeatures: edges dilated", dilatedEdges);
 
     //Size digitSize = calculateDigitSize(reEnhancedAfterWarp);
 
@@ -148,10 +161,17 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     // Derived from https://docs.opencv.org/trunk/d6/d6e/group__imgproc__draw.html#ga746c0625f1781f1ffc9056259103edbc
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    //TODO: try findContours with canny edges
+    // Contours must be white in input, background must be black
     //TODO: minimize search by roi in image, based on requirements. (offset parameter must be used).
-    findContours(reEnhancedAfterWarp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    //findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+        imageAnalizer.showImage("ExtractFeatures: enhancedInverted", reEnhancedAfterWarpInverted);
+
+    // findContours on canny edges splits roi's of a digit if there are gaps between it's segments.
+    findContours(reEnhancedAfterWarpInverted, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    // findContours(dilatedEdges, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+
+
+    qDebug() << "contours.size() " << contours.size();
+
 
     //TODO: refactor
     //Sort contours from left to right
@@ -184,9 +204,12 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     //TODO: srcOriginal can be rotated. Use rotationCorrected instead? Then we also need grayscale samples.
    resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
 
+   imageAnalizer.showImage("ExtractFeatures, markedDigits before mark", markedDigits);
+
     vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
 
     Mat drawing(markedDigits);
+
     for( uint i = 0; i< contours.size(); i++ )
     {
         Rect rect = boundRect[i];
@@ -210,6 +233,9 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
             Mat results;
             float result = kNearest->findNearest(sample, kNearest->getDefaultK(), results);
             int val = (int)result;
+
+            qDebug() << "val: " << val;
+
             string charValue = to_string(val);
             if (val == 10) {
                 charValue = ".";
@@ -220,7 +246,8 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
             {
                 rectangle( drawing, rect.tl(), rect.br(), color, 2, 8, 0 );
                 color = Scalar(255,255,255);
-                putText(drawing, charValue, rect.br(), FONT_HERSHEY_DUPLEX, 1, color, 3);
+                //TODO
+//                putText(drawing, charValue, rect.br(), FONT_HERSHEY_DUPLEX, 1, color, 3);
                 //final number
                 number += charValue;
             }
@@ -245,12 +272,12 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     ImageObject * result = new ImageObject();
 
     // Only for test
-//    imageAnalizer.resetNextWindowPosition();
-//    imageAnalizer.showImage("disp_lines", disp_lines);
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("disp_lines", disp_lines);
 //    imageAnalizer.showImage("rotationCorrected", rotationCorrected);
-//    imageAnalizer.showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
+    imageAnalizer.showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
 //    imageAnalizer.showImage("Feature extract: dilated", dilated);
-    //    imageAnalizer.showImage("Feature extract: labeledContours", labeledContours);
+//        imageAnalizer.showImage("Feature extract: labeledContours", labeledContours);
     imageAnalizer.showImage("Feature extract: markedDigits", markedDigits);
 
     return result;
@@ -306,6 +333,11 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
             path = referenceImageDir + to_string(i) + ".png";
         }
         Mat img = imread(path);
+
+        //TEST
+//        imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("REF image ", img);
+
         responseLabels.push_back(i);
 
         // convert to single row matrix

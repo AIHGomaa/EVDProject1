@@ -20,13 +20,12 @@ MainWindow::MainWindow(QWidget *parent) :
         qDebug() << it.next();
         QString filename = it.fileName();
         if(filename.length() > 5){
-            ui->cmbImages->addItem(filename);
+            ui->cmbTestImages->addItem(filename);
         }
     }
 
     gaugeReader = new SevenSegmentGaugeReader();
     imageAnalizer = ImageAnalizer();
-
 }
 
 MainWindow::~MainWindow()
@@ -62,7 +61,7 @@ void MainWindow::configGaugeReader()
 
 void MainWindow::on_btnReadImageValue_clicked()
 {
-    QString filename = ui->cmbImages->currentText();
+    QString filename = ui->cmbTestImages->currentText();
     QString path = QString(testImageDir + filename);
     Mat src = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);
 
@@ -70,6 +69,8 @@ void MainWindow::on_btnReadImageValue_clicked()
         ui->statusBar->showMessage(QString("could not open image " + path), 0);
         return;
     }
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("MainWindow: Original image", src);
 
     Size imgSize(src.cols, src.rows);
     Mat enhanced(imgSize, CV_8UC1);
