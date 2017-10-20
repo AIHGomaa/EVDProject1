@@ -82,7 +82,7 @@ void MainWindow::on_btnReadImageValue_clicked()
     //TODO? na rotatiecorrectie: pre-roi voor contours
 
     gaugeReader->SegmentImage(enhanced, segmented);
-    gaugeReader->ExtractFeatures(segmented, src);
+    gaugeReader->ExtractFeatures(segmented, enhanced, src);
 
     imageAnalizer.resetNextWindowPosition();
     //imageAnalizer.showImage("MainWindow: Original image", src);
