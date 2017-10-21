@@ -195,9 +195,16 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     }
 
     string number;
+
+    // Option 1
     Mat markedDigits;// = berekenDigitAlgorithm(dilatedEdges);
 //   Mat markedDigits = berekenDigitAlgorithm(reEnhancedAfterWarpInverted);
 
+    // Alternative 2: Multi-scale template matching
+    Size digitSize = calculateDigitSizeByMultiScaleTemplateMatch(reEnhancedAfterWarp);
+    qDebug() << "digitSize by calculateDigitSizeByMultiScaleTemplateMatch" << digitSize.width << "*" << digitSize.height;
+
+    // Option 3: K-nearest
 
     //TODO: srcOriginal can be rotated and was already scaled before. Use rotationCorrected instead? Then we also need grayscale samples.
    resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
@@ -718,4 +725,91 @@ Size SevenSegmentGaugeReader::calculateDigitSize(Mat src)
         return Size(0, 0);
         //throw Exception(0, "No digits recognized", "calculateDigitSize", "SevenSegmentGaugeReader.cpp", 0);
     }
+}
+
+// Derived from https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
+// and C++ translation on http://hassannadeem.com/assets/code/multi_scale_template_matching_cpp.zip)
+// Contains the description of the match
+typedef struct TemplateMatchInfo{
+    bool init;
+    double maxVal;
+    Point maxLoc;
+    double scale;
+    TemplateMatchInfo(): init(0){}
+} TemplateMatchInfo;
+
+// Derived from https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
+// and C++ translation on http://hassannadeem.com/assets/code/multi_scale_template_matching_cpp.zip)
+Size SevenSegmentGaugeReader::calculateDigitSizeByMultiScaleTemplateMatch(Mat src)
+{
+    Mat templateDigit8p = loadReferenceImage("MaskDigit8SegmentP_30x40.png");
+    int templateWidth = templateDigit8p.cols;
+    int templateHeight = templateDigit8p.rows;
+
+//    Mat templateCanny;
+//    cvtColor(template_mat, template_mat, COLOR_BGR2GRAY);
+    //TODO: configure thresholds
+//    Canny(templateDigit8p, templateCanny, 50, 50*4);
+
+    // Only for test
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("multiScaleTemplateMatch: ", templateDigit8p);
+//    imageAnalizer.showImage("multiScaleTemplateMatch: ", templateCanny);
+
+    Mat target_resized;//, scaledCanny;
+
+    const float SCALE_START = 1;
+    const float SCALE_END = 0.2;
+    const int SCALE_POINTS = 20;
+
+    TemplateMatchInfo found;
+    for(float scale = SCALE_START; scale >= SCALE_END; scale -= (SCALE_START - SCALE_END)/SCALE_POINTS){
+        resize(src, target_resized, Size(0,0), scale, scale);
+
+        // Break if target image becomes smaller than template
+        if(templateWidth > target_resized.cols || templateHeight > target_resized.rows) break;
+
+//        Canny(target_resized, scaledCanny, 50, 50*4);
+
+        // Match template
+        Mat result;
+        matchTemplate(target_resized, templateDigit8p, result, TM_CCOEFF);
+//        matchTemplate(scaledCanny, templateCanny, result, TM_CCOEFF);
+
+        double maxVal; Point maxLoc;
+        minMaxLoc(result, NULL, &maxVal, NULL, &maxLoc);
+
+        // If better match found
+        if( found.init == false || maxVal > found.maxVal ){
+            found.init = true;
+            found.maxVal = maxVal;
+            found.maxLoc = maxLoc;
+            found.scale = scale;
+        }
+
+        // START VISUALIZATION CODE
+        Mat target_clone;
+        resize(src, target_clone, Size(0,0), scale, scale);// Resize
+        rectangle(target_clone, Point(maxLoc.x, maxLoc.y), Point(maxLoc.x + templateWidth, maxLoc.y + templateHeight), Scalar(0, 255, 255), 3);
+        imshow("DBG", target_clone);
+        waitKey(200);
+        // END VISUALIZATION CODE
+    }
+
+    int startX, startY, endX, endY;
+    startX = found.maxLoc.x / found.scale;
+    startY = found.maxLoc.y / found.scale;
+
+    endX= (found.maxLoc.x + templateWidth) / found.scale;
+    endY= (found.maxLoc.y + templateHeight) / found.scale;
+
+    Mat markedMatch;
+    src.copyTo(markedMatch);
+
+    // draw a bounding box around the detected result and display the image
+    rectangle(markedMatch, Point(startX, startY), Point(endX, endY), Scalar(0, 0, 255), 3);
+
+    imageAnalizer.showImage("multiScaleTemplateMatch, markedMatch", markedMatch);
+
+    return Size(endX - startX, endY - startY);
 }

@@ -54,6 +54,7 @@ private:
     Mat berekenDigitAlgorithm(Mat src);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
+    Size calculateDigitSizeByMultiScaleTemplateMatch(Mat src);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
