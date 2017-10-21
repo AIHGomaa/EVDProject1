@@ -739,52 +739,70 @@ typedef struct TemplateMatchInfo{
 } TemplateMatchInfo;
 
 // Derived from https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
-// and C++ translation on http://hassannadeem.com/assets/code/multi_scale_template_matching_cpp.zip)
+// (C++ translation on http://hassannadeem.com/assets/code/multi_scale_template_matching_cpp.zip)
+// and https://docs.opencv.org/3.3.0/da/d53/MatchTemplate_Demo_8cpp-example.html#a15
 Size SevenSegmentGaugeReader::calculateDigitSizeByMultiScaleTemplateMatch(Mat src)
 {
     Mat templateDigit8p = loadReferenceImage("MaskDigit8SegmentP_30x40.png");
+    Mat scaledImage;
+
+    int templateMatchCannyThreshold1 = 50;
+    int templateMatchCannyThreshold2 = 50 * 4;
+    bool templayteMatchByEdges = true;
+    int templateMatchMethod = TM_CCOEFF;   // TM_SQDIFF_NORMED, TM_SQDIFF
+
     int templateWidth = templateDigit8p.cols;
     int templateHeight = templateDigit8p.rows;
 
-//    Mat templateCanny;
-//    cvtColor(template_mat, template_mat, COLOR_BGR2GRAY);
-    //TODO: configure thresholds
-//    Canny(templateDigit8p, templateCanny, 50, 50*4);
+    // Optional: match edges instead of image
+    Mat templateEdges, scaledEdges;
+    Canny(templateDigit8p, templateEdges, templateMatchCannyThreshold1, templateMatchCannyThreshold2);
 
     // Only for test
     imageAnalizer.resetNextWindowPosition();
-    imageAnalizer.showImage("multiScaleTemplateMatch: ", templateDigit8p);
-//    imageAnalizer.showImage("multiScaleTemplateMatch: ", templateCanny);
-
-    Mat target_resized;//, scaledCanny;
+    imageAnalizer.showImage("multiScaleTemplateMatch: templateDigit8p", templateDigit8p);
+    imageAnalizer.showImage("multiScaleTemplateMatch: templateEdges", templateEdges);
 
     const float SCALE_START = 1;
     const float SCALE_END = 0.2;
     const int SCALE_POINTS = 20;
 
-    TemplateMatchInfo found;
+    TemplateMatchInfo foundMatchInfo;
     for(float scale = SCALE_START; scale >= SCALE_END; scale -= (SCALE_START - SCALE_END)/SCALE_POINTS){
-        resize(src, target_resized, Size(0,0), scale, scale);
+        resize(src, scaledImage, Size(0,0), scale, scale);
 
-        // Break if target image becomes smaller than template
-        if(templateWidth > target_resized.cols || templateHeight > target_resized.rows) break;
+        if(templateWidth > scaledImage.cols || templateHeight > scaledImage.rows)
+            break;  // scaled image size < template size
 
-//        Canny(target_resized, scaledCanny, 50, 50*4);
+        // Optional: match edges instead of image
+        Canny(scaledImage, scaledEdges, templateMatchCannyThreshold1, templateMatchCannyThreshold2);
 
-        // Match template
-        Mat result;
-        matchTemplate(target_resized, templateDigit8p, result, TM_CCOEFF);
-//        matchTemplate(scaledCanny, templateCanny, result, TM_CCOEFF);
+        Mat matchResult;
+        if (templayteMatchByEdges)
+            matchTemplate(scaledEdges, templateEdges, matchResult, templateMatchMethod);
+        else
+            matchTemplate(scaledImage, templateDigit8p, matchResult, templateMatchMethod);
 
-        double maxVal; Point maxLoc;
-        minMaxLoc(result, NULL, &maxVal, NULL, &maxLoc);
+        // Optional: normalize result to range 0..1 (https://docs.opencv.org/3.3.0/da/d53/MatchTemplate_Demo_8cpp-example.html#a15)
+//        normalize(matchResult, matchResult, 0, 1, NORM_MINMAX, -1, Mat());
 
-        // If better match found
-        if( found.init == false || maxVal > found.maxVal ){
-            found.init = true;
-            found.maxVal = maxVal;
-            found.maxLoc = maxLoc;
-            found.scale = scale;
+        // Find the minimum and maximum element values and their positions
+        double minVal; double maxVal; Point minLoc; Point maxLoc;
+        Point matchLoc;
+
+//        minMaxLoc(matchResult, NULL, &maxVal, NULL, &maxLoc);
+        minMaxLoc(matchResult, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+        if( templateMatchMethod  == TM_SQDIFF || templateMatchMethod == TM_SQDIFF_NORMED )
+          matchLoc = minLoc;
+        else
+          matchLoc = maxLoc;
+
+        // keep new match if it is better
+        if( foundMatchInfo.init == false || maxVal > foundMatchInfo.maxVal ){
+            foundMatchInfo.init = true;
+            foundMatchInfo.maxVal = maxVal;
+            foundMatchInfo.maxLoc = maxLoc;
+            foundMatchInfo.scale = scale;
         }
 
         // START VISUALIZATION CODE
@@ -797,11 +815,11 @@ Size SevenSegmentGaugeReader::calculateDigitSizeByMultiScaleTemplateMatch(Mat sr
     }
 
     int startX, startY, endX, endY;
-    startX = found.maxLoc.x / found.scale;
-    startY = found.maxLoc.y / found.scale;
+    startX = foundMatchInfo.maxLoc.x / foundMatchInfo.scale;
+    startY = foundMatchInfo.maxLoc.y / foundMatchInfo.scale;
 
-    endX= (found.maxLoc.x + templateWidth) / found.scale;
-    endY= (found.maxLoc.y + templateHeight) / found.scale;
+    endX= (foundMatchInfo.maxLoc.x + templateWidth) / foundMatchInfo.scale;
+    endY= (foundMatchInfo.maxLoc.y + templateHeight) / foundMatchInfo.scale;
 
     Mat markedMatch;
     src.copyTo(markedMatch);
@@ -811,5 +829,6 @@ Size SevenSegmentGaugeReader::calculateDigitSizeByMultiScaleTemplateMatch(Mat sr
 
     imageAnalizer.showImage("multiScaleTemplateMatch, markedMatch", markedMatch);
 
+    //TODO: handle not found
     return Size(endX - startX, endY - startY);
 }

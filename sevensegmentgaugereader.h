@@ -30,6 +30,7 @@ public:
     int houghVotesThreshold = 100;
     double houghMinLineLength = 0.15; // relative to image width
     double houghMaxLineGap = 20;
+
     Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 
     SevenSegmentGaugeReader();
