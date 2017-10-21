@@ -60,85 +60,80 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     //     imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
 }
 
-// TODO: use enhanced instead of srcOriginal?
-ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal)
+double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
 {
-    // TODO: refactor duplicate code in EnhanceImage()
-    resize(srcOriginal, srcOriginal, IMG_SIZE, 0, 0, INTER_LINEAR);
-
-    imageAnalizer.resetNextWindowPosition();
-    //    imageAnalizer.showImage("ExtractFeatures: edges", edges);
-    //imageAnalizer.showImage("ExtractFeatures: enhancedImage", enhancedImage);
-    
-    //-----------------------------------
-    // Correct rotation
-    //-----------------------------------
     // Derived from http://felix.abecassis.me/2011/09/opencv-detect-skew-angle/
     std::vector<cv::Vec4i> lines;
     cv::HoughLinesP(edges, lines, houghDistanceResolution, houghAngleResolutionDegrees * CV_PI/180.0, houghVotesThreshold, houghMinLineLength, houghMaxLineGap);
-    
+
     cv::Mat disp_lines(IMG_SIZE, CV_8UC1, cv::Scalar(0, 0, 0));
     double angleRad;
     unsigned nLines = lines.size();
-    
+
     // RQ18: +/- 20 degrees must be corrected. We take +/-45 degrees.
     double maxRotationRad = 45 * CV_PI/180.0;
     vector<double> angles;
     for (unsigned i = 0; i < nLines; ++i)
     {
         angleRad = atan2((double)lines[i][3] - lines[i][1], (double)lines[i][2] - lines[i][0]);
-        
         if (abs(angleRad) > maxRotationRad)
             continue;
-        
+
         line(disp_lines, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), cv::Scalar(255, 0 ,0));
         angles.push_back (angleRad);
     }
-    
+
     double medianAngleRad = median(angles);
     double medianAngleDegr = medianAngleRad * 180.0 / CV_PI;
-    
+
     std::cout << "mean angle: " << medianAngleRad << "rad, " << medianAngleDegr << "degr" << std::endl;
-    
-    //    cv::destroyWindow(filename);
-    
-    //----------------------------
-    // Rotation correction
-    //----------------------------
-    
+
+    return medianAngleDegr;
+}
+
+void SevenSegmentGaugeReader::correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale)
+{
+    // Derived from https://stackoverflow.com/questions/2289690/opencv-how-to-rotate-iplimage
+    Point2f centerPoint(srcGrayScale.cols/2.0F, srcGrayScale.rows/2.0F);
+    Mat rotationMatrix = getRotationMatrix2D(centerPoint, rotationDegrees, 1.0);
+
+    Mat rotationCorrected(IMG_SIZE, CV_8UC1);
+
+    //TODO?: rotate earlier version of the image and repeat segmentation (and enhancement) for better contours search
+    // White border values
+    warpAffine(srcGrayScale, rotationCorrected, rotationMatrix, srcGrayScale.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
+    //TODO: optimalisation: use one of the rotated images
+    warpAffine(srcColor, dstColor, rotationMatrix, srcGrayScale.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255, 255, 255));
+
+    Mat thresAfterRotate;
+    threshold(rotationCorrected, thresAfterRotate, 127, 255, THRESH_BINARY);
+
+    //TODO: MORPH_ELLIPSE?
+    Mat morphKernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
+    //        Mat element = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
+    //        morphologyEx(srcCanny, srcCanny, MORPH_CLOSE, kernel);
+    Mat reEnhancedAfterWarp(IMG_SIZE, CV_8UC1);
+    morphologyEx(thresAfterRotate, reEnhancedAfterWarp, MORPH_OPEN, morphKernel);
+
+    // Only for test
+    //        imageAnalizer.resetNextWindowPosition();
+    //        imageAnalizer.showImage("Feature extract: disp_lines", disp_lines);
+    //        imageAnalizer.showImage("Feature extract: rotationCorrected", rotationCorrected);
+    //        imageAnalizer.showImage("Feature extract: thresAfterRotate", thresAfterRotate);
+
+    reEnhancedAfterWarp.copyTo(dstGrayScale);
+}
+
+// TODO: use enhanced instead of srcOriginal?
+ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal)
+{
+    // TODO: refactor duplicate code in EnhanceImage()
+    resize(srcOriginal, srcOriginal, IMG_SIZE, 0, 0, INTER_LINEAR);
+
+    double rotationDegrees = calculateRotationDegrees(edges);
     //TODO: configurable
-    if(abs(medianAngleDegr) > 0.5)
-    {
-        // Derived from https://stackoverflow.com/questions/2289690/opencv-how-to-rotate-iplimage
-        Point2f centerPoint(edges.cols/2.0F, edges.rows/2.0F);
-        Mat rotationMatrix = getRotationMatrix2D(centerPoint, medianAngleDegr, 1.0);
-        
-        Mat rotationCorrected(IMG_SIZE, CV_8UC1);
-        
-        //TODO?: rotate earlier version of the image and repeat segmentation (and enhancement) for better contours search
-        // White border values
-        warpAffine(enhancedImage, rotationCorrected, rotationMatrix, enhancedImage.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
-        //TODO: optimalisation: use one of the rotated images
-        warpAffine(srcOriginal, srcOriginal, rotationMatrix, enhancedImage.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255, 255, 255));
-
-        Mat thresAfterRotate;
-        threshold(rotationCorrected, thresAfterRotate, 127, 255, THRESH_BINARY);
-
-        //TODO: MORPH_ELLIPSE?
-        Mat morphKernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
-        //        Mat element = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
-        //        morphologyEx(srcCanny, srcCanny, MORPH_CLOSE, kernel);
-        Mat reEnhancedAfterWarp(IMG_SIZE, CV_8UC1);
-        morphologyEx(thresAfterRotate, reEnhancedAfterWarp, MORPH_OPEN, morphKernel);
-        
-        // Only for test
-        //        imageAnalizer.resetNextWindowPosition();
-        //        imageAnalizer.showImage("Feature extract: disp_lines", disp_lines);
-        //        imageAnalizer.showImage("Feature extract: rotationCorrected", rotationCorrected);
-        //        imageAnalizer.showImage("Feature extract: thresAfterRotate", thresAfterRotate);
-
-        reEnhancedAfterWarp.copyTo(enhancedImage);
-    }
+    if(abs(rotationDegrees) > 0.5)
+        correctRotation(rotationDegrees, srcOriginal, enhancedImage, srcOriginal, enhancedImage);
 
     //TODO: choose the best option and cleanup
     //-----------------------------------

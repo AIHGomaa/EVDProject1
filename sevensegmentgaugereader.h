@@ -77,6 +77,8 @@ private:
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
     DigitInfo calculateDigitInfoByMultiScaleTemplateMatch(Mat src);
+    double calculateRotationDegrees(Mat src);
+    void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
