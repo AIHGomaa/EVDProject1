@@ -55,6 +55,17 @@ public:
     //TODO: in separate class
     double median(vector<double> collection);
 private:
+    typedef struct DigitInfo {
+        int width, height, bottomY;
+        DigitInfo(int width, int height, int bottomY)
+        {
+            this->width = width;
+            this->height = height;
+            this->bottomY = bottomY;
+        }
+
+    } DigitInfo;
+
     //TODO: keep source image aspect ratio
     const int X_RESOLUTION = 480;
     const int Y_RESOLUTION = 640;
@@ -65,7 +76,7 @@ private:
     Mat berekenDigitAlgorithm(Mat src);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
-    Size calculateDigitSizeByMultiScaleTemplateMatch(Mat src);
+    DigitInfo calculateDigitInfoByMultiScaleTemplateMatch(Mat src);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
