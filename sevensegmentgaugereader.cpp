@@ -163,15 +163,11 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     vector<Vec4i> hierarchy;
     // Contours must be white in input, background must be black
     //TODO: minimize search by roi in image, based on requirements. (offset parameter must be used).
-        imageAnalizer.showImage("ExtractFeatures: enhancedInverted", reEnhancedAfterWarpInverted);
-
     // findContours on canny edges splits roi's of a digit if there are gaps between it's segments.
     findContours(reEnhancedAfterWarpInverted, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
     // findContours(dilatedEdges, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
 
-
     qDebug() << "contours.size() " << contours.size();
-
 
     //TODO: refactor
     //Sort contours from left to right
@@ -199,12 +195,12 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     }
 
     string number;
-    Mat markedDigits;// = berekenDigitAlgorithm(dilated);
-    //TODO: just copy is enough?
-    //TODO: srcOriginal can be rotated. Use rotationCorrected instead? Then we also need grayscale samples.
-   resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
+    Mat markedDigits;// = berekenDigitAlgorithm(dilatedEdges);
+//   Mat markedDigits = berekenDigitAlgorithm(reEnhancedAfterWarpInverted);
 
-   imageAnalizer.showImage("ExtractFeatures, markedDigits before mark", markedDigits);
+
+    //TODO: srcOriginal can be rotated and was already scaled before. Use rotationCorrected instead? Then we also need grayscale samples.
+   resize(srcOriginal, markedDigits, IMG_SIZE, 0, 0, INTER_LINEAR);
 
     vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8","9" };
 
@@ -274,10 +270,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     // Only for test
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("disp_lines", disp_lines);
-//    imageAnalizer.showImage("rotationCorrected", rotationCorrected);
     imageAnalizer.showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
-//    imageAnalizer.showImage("Feature extract: dilated", dilated);
-//        imageAnalizer.showImage("Feature extract: labeledContours", labeledContours);
     imageAnalizer.showImage("Feature extract: markedDigits", markedDigits);
 
     return result;
@@ -333,11 +326,6 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
             path = referenceImageDir + to_string(i) + ".png";
         }
         Mat img = imread(path);
-
-        //TEST
-//        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("REF image ", img);
-
         responseLabels.push_back(i);
 
         // convert to single row matrix
@@ -350,8 +338,8 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     kNearest->train(samples, ml::ROW_SAMPLE, responseLabels);
 
     // Only for test
-    imageAnalizer.resetNextWindowPosition();
-    imageAnalizer.showImage("samples", samples);
+//    imageAnalizer.resetNextWindowPosition();
+//    imageAnalizer.showImage("samples", samples);
 
     return true;
 }
@@ -374,13 +362,16 @@ ReaderResult SevenSegmentGaugeReader::Classify(ImageObject *features)
 
 ReaderResult SevenSegmentGaugeReader::ReadGaugeImage(Mat src)
 {
-    throw Exception();
+    Mat enhanced, segmented;
+    EnhanceImage(src, enhanced);
+    SegmentImage(enhanced, segmented);
+    return Classify(ExtractFeatures(segmented, enhanced, src));
 }
 
 Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName)
 {
     string path = referenceImageDir + fileName;
-    Mat dst = imread(path, CV_LOAD_IMAGE_GRAYSCALE); // _COLOR);
+    Mat dst = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
     if(!dst.data)
     {
         qDebug() << QString::fromStdString(path) << " can not be loaded";
@@ -395,7 +386,7 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
 
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
-    findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+    findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
     //Sort contours from left to right
     struct contour_sorter
@@ -423,7 +414,7 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
 
     Mat drawing(markedDigits);
 
-    //Masker derived from https://www.pyimagesearch.com/2017/02/13/recognizing-digits-with-opencv-and-python/
+    //Mask derived from https://www.pyimagesearch.com/2017/02/13/recognizing-digits-with-opencv-and-python/
     map<vector<int>, int> DIGITS_LOOKUP;
     vector<int> zero { 1, 1, 1, 0, 1, 1, 1 }; DIGITS_LOOKUP[zero] = 1;
     vector<int> one{ 0, 0, 1, 0, 0, 1, 0 }; DIGITS_LOOKUP[one] = 2;
@@ -444,6 +435,7 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
          int width = rect.width;
          int height = rect.height;
 
+         //TODO: the correct size depends on display size in source image/ distance to display
         if (height>20 && height < 80 && width>20 && width < 80)
         //	if(height>2 && width>1)
         {

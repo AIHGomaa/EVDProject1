@@ -72,9 +72,7 @@ void MainWindow::on_btnReadImageValue_clicked()
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("MainWindow: Original image", src);
 
-    Size imgSize(src.cols, src.rows);
-    Mat enhanced(imgSize, CV_8UC1);
-    Mat segmented(imgSize, CV_8UC3);
+    Mat enhanced, segmented;
 
     configGaugeReader();
 
