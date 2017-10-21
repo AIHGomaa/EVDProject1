@@ -44,6 +44,8 @@ void MainWindow::configGaugeReader()
     gr->cannyThreshold2 = ui->spnSegmentationCannyThreshold2->value();
     gr->cannyAppertureSize = ui->spnSegmentationCannyAppertureSize->value();
     gr->dilateKernelSize = ui->spnSegmentationDilateKernelSize->value();
+    gr->digitDilateKernelWidth = ui->spnDigitDilateKernelWidth->value();
+    gr->digitDilateKernelHeight = ui->spnDigitDilateKernelHeight->value();
 
     gr->houghDistanceResolution = ui->spnFeatureExtractionHoughDistanceResolution->value();
     gr->houghAngleResolutionDegrees = ui->spnFeatureExtractionHoughAngleResolution->value();
@@ -69,8 +71,8 @@ void MainWindow::on_btnReadImageValue_clicked()
         ui->statusBar->showMessage(QString("could not open image " + path), 0);
         return;
     }
-    imageAnalizer.resetNextWindowPosition();
-    imageAnalizer.showImage("MainWindow: Original image", src);
+    //    imageAnalizer.resetNextWindowPosition();
+    //    imageAnalizer.showImage("MainWindow: Original image", src);
 
     Mat enhanced, segmented;
 
@@ -83,10 +85,10 @@ void MainWindow::on_btnReadImageValue_clicked()
     gaugeReader->SegmentImage(enhanced, segmented);
     gaugeReader->ExtractFeatures(segmented, enhanced, src);
 
-    imageAnalizer.resetNextWindowPosition();
+    //    imageAnalizer.resetNextWindowPosition();
     //imageAnalizer.showImage("MainWindow: Original image", src);
-    imageAnalizer.showImage("MainWindow: Enhanced image", enhanced);
-    imageAnalizer.showImage("MainWindow: Segmented image", segmented);
+    //    imageAnalizer.showImage("MainWindow: Enhanced image", enhanced);
+    //    imageAnalizer.showImage("MainWindow: Segmented image", segmented);
 }
 
 void MainWindow::on_spnEnhancementadaptiveThresholdBlockSize_valueChanged()
@@ -145,6 +147,16 @@ void MainWindow::on_spnFeatureExtractionHoughMinLineLength_valueChanged()
 }
 
 void MainWindow::on_spnSegmentationCannyAppertureSize_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnDigitDilateKernelWidth_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnDigitDilateKernelHeight_valueChanged()
 {
     on_btnReadImageValue_clicked();
 }

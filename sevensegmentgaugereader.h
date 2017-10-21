@@ -23,6 +23,7 @@ public:
     int cannyThreshold2 = 200;
     int cannyAppertureSize = 3;
     int dilateKernelSize = 3;
+
     string referenceImageDir;
 
     double houghDistanceResolution = 1;
@@ -30,6 +31,15 @@ public:
     int houghVotesThreshold = 100;
     double houghMinLineLength = 0.15; // relative to image width
     double houghMaxLineGap = 20;
+
+    int digitDilateKernelWidth = 1;
+    int digitDilateKernelHeight = 5;
+
+    //TODO: configure in UI
+    int templateMatchCannyThreshold1 = 50;
+    int templateMatchCannyThreshold2 = 50 * 4;
+    bool templayteMatchByEdges = true;
+    int templateMatchMethod = TM_CCOEFF;   // TM_SQDIFF_NORMED, TM_SQDIFF
 
     Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 

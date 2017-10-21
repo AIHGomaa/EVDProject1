@@ -51,6 +51,10 @@ private slots:
 
     void on_spnSegmentationCannyAppertureSize_valueChanged();
 
+    void on_spnDigitDilateKernelWidth_valueChanged();
+
+    void on_spnDigitDilateKernelHeight_valueChanged();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory
