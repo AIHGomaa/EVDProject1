@@ -19,8 +19,8 @@ public:
     int adaptivethresholdC = -25;
     int gaussianBlurSize = 3;
 
-    int cannyThreshold1 = 200;
-    int cannyThreshold2 = 200;
+    int cannyThreshold1 = 10;
+    int cannyThreshold2 = 100;
     int cannyAppertureSize = 3;
     int dilateKernelSize = 3;
 
@@ -73,7 +73,7 @@ private:
 
     ImageAnalizer imageAnalizer;
     Size calculateDigitSize(Mat src);
-    Mat berekenDigitAlgorithm(Mat src);
+    Mat berekenDigitAlgorithm(Mat src, vector<vector<Point>> contours);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
     DigitInfo calculateDigitInfoByMultiScaleTemplateMatch(Mat src);

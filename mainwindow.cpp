@@ -63,6 +63,12 @@ void MainWindow::configGaugeReader()
 
 void MainWindow::on_btnReadImageValue_clicked()
 {
+    auto childList = findChildren<QMainWindow*>();
+    for (auto child : childList)
+    {
+        child->close();
+    }
+
     QString filename = ui->cmbTestImages->currentText();
     QString path = QString(testImageDir + filename);
     Mat src = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);

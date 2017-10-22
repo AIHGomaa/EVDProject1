@@ -196,17 +196,21 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
         boundRect[i] = boundingRect(Mat(contours_poly[i]));
     }
     
-    string number;
+
 
     // Option 2: Multi-scale template matching
-    DigitInfo digitInfo = calculateDigitInfoByMultiScaleTemplateMatch(enhancedImage);
+    //DigitInfo digitInfo = calculateDigitInfoByMultiScaleTemplateMatch(enhancedImage);
 
-    qDebug() << "digitInfo by calculateDigitInfoByMultiScaleTemplateMatch" << digitInfo.width << "*" << digitInfo.height << digitInfo.bottomY;
+    //qDebug() << "digitInfo by calculateDigitInfoByMultiScaleTemplateMatch" << digitInfo.width << "*" << digitInfo.height << digitInfo.bottomY;
+
+    Mat markedDigits;
 
     // Option 1
-    Mat markedDigits;// = berekenDigitAlgorithm(dilatedEdges);
-//    Mat markedDigits; = berekenDigitAlgorithm(dilatedEnhancedInverted);
+    markedDigits = berekenDigitAlgorithm(dilatedEnhancedInverted, contours);
 
+    /*
+
+    string number;
     // Option 3: K-nearest
     //TODO: optimalisation: use grayscale image instead? Then we also need grayscale samples.
     srcOriginal.copyTo(markedDigits);
@@ -276,7 +280,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     QMessageBox msgBox;
     msgBox.setText(QString::fromStdString(number));
     msgBox.exec();
-
+*/
 
     // iterate through all the top-level contours,
     // draw each connected component with its own random color
@@ -294,7 +298,7 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     imageAnalizer.resetNextWindowPosition();
     //    imageAnalizer.showImage("disp_lines", disp_lines);
     imageAnalizer.showImage("Feature extract: enhancedImage", enhancedImage);
-    imageAnalizer.showImage("Feature extract: markedDigits", markedDigits);
+   // imageAnalizer.showImage("Feature extract: markedDigits", markedDigits);
 
     return result;
 }
@@ -405,35 +409,11 @@ Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName)
     return dst;
 }
 
-Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
+Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat src, vector<vector<Point>> contours){
 
-    vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy;
-    findContours(dilated, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-    //Sort contours from left to right
-    struct contour_sorter
-    {
-        bool operator ()(const vector<Point> a, const vector<Point> b)
-        {
-            Rect ra(boundingRect(a));
-            Rect rb(boundingRect(b));
-            return (ra.x < rb.x);
-        }
-    };
-    sort(contours.begin(), contours.end(), contour_sorter());
-
-    vector<vector<Point>> contours_poly( contours.size() );
-    vector<Rect> boundRect( contours.size() );
-
-    // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
-    for( uint i = 0; i < contours.size(); i++ )
-    {
-        approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
-        boundRect[i] = boundingRect(Mat(contours_poly[i]));
-    }
     Mat markedDigits;
-    dilated.copyTo(markedDigits);
+    src.copyTo(markedDigits);
 
     Mat drawing(markedDigits);
 
@@ -454,12 +434,12 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
 
     for (int i = 0; i< contours.size(); i++)
     {
-        Rect rect = boundRect[i];
+        Rect rect = boundingRect(Mat(contours[i]));
         int width = rect.width;
         int height = rect.height;
 
         //TODO: the correct size depends on display size in source image/ distance to display
-        if (height>20 && height < 80 && width>20 && width < 80)
+        if (height>20 && height < 80 && width>10 && width < 80)
             //	if(height>2 && width>1)
         {
             Mat roiTest = markedDigits(rect);
@@ -474,13 +454,13 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
 
             //# define the set of 7 segments
             vector<vector<Point2d>> segments;
-            vector<Point2d> segment0 = getPoint(Point2d(10, 0), Point2d(w - 10, dH)); // top										0
-            vector<Point2d> segment1 = getPoint(Point2d(10, 0), Point2d(dW + 10, h / 2)); // top left								1
-            vector<Point2d> segment2 = getPoint(Point2d(w - dW, 0), Point2d(w, h / 2)); // top right								2
+            vector<Point2d> segment0 = getPoint(Point2d(5, 0), Point2d(w - 2, dH + 2)); // top										0
+            vector<Point2d> segment1 = getPoint(Point2d(3, 5), Point2d(dW + 5, h / 2)); // top left									1
+            vector<Point2d> segment2 = getPoint(Point2d(w - dW, 0), Point2d(w, h / 2)); // top right                                2
             vector<Point2d> segment3 = getPoint(Point2d(5, (h / 2) - (dHC + 2)), Point2d(w - 5, (h / 2) + (dHC + 2))); // center	3
-            vector<Point2d> segment4 = getPoint(Point2d(0, h / 2), Point2d(dW, h)); // bottom left									4
+            vector<Point2d> segment4 = getPoint(Point2d(0, (h / 2)), Point2d(dW, h)); // bottom left								4
             vector<Point2d> segment5 = getPoint(Point2d(w - dW - 5, h / 2), Point2d(w - 5, h)); // bottom right						5
-            vector<Point2d> segment6 = getPoint(Point2d(0, h - dH), Point2d(w - 5, h)); // bottom									6
+            vector<Point2d> segment6 = getPoint(Point2d(0, h - dH - 2), Point2d(w - 5, h)); // bottom
             segments.push_back(segment0);
             segments.push_back(segment1);
             segments.push_back(segment2);
@@ -489,8 +469,8 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
             segments.push_back(segment5);
             segments.push_back(segment6);
 
-            Mat element = getStructuringElement(MORPH_RECT, Size(2, 2));
-            dilate(roiTest, roiTest, element);
+            //Mat element = getStructuringElement(MORPH_RECT, Size(1, 1));
+            //dilate(roiTest, roiTest, element);
 
             vector<int> on = { 0, 0, 0, 0, 0, 0, 0 };
             int i1 = 0;
@@ -517,23 +497,26 @@ Mat SevenSegmentGaugeReader::berekenDigitAlgorithm(Mat dilated){
             }
 
             int digit = DIGITS_LOOKUP[on];
+            if (width < 20 && height > 20 && digit == 9) { //with digit 1 the contour is not wide
+                digit = 2;
+            }
             if (digit > 0) {
-
                 digit = digit - 1;
                 Scalar color = Scalar(255, 255, 255);
 
+                Point2d p = Point2d(rect.x - 10, rect.y - 10);
                 rectangle(drawing, rect.tl(), rect.br(), color, 2, 8, 0);
-                putText(drawing, to_string(digit), rect.br(), FONT_HERSHEY_DUPLEX, 1, color, 3);
+                putText(drawing, to_string(digit), p, FONT_HERSHEY_DUPLEX, 1, color, 3);
 
-                digits += digit;
+                digits += to_string(digit);
             }
         }
     }
-    if(digits != ""){
+   /* if(digits != ""){
         QMessageBox msgBox;
-        msgBox.setText(QString::fromStdString(digits));
+        msgBox.setText(QString::fromStdString("digits are " + digits));
         msgBox.exec();
-    }
+    }*/
     imshow("Box", markedDigits);
 
     return markedDigits;
