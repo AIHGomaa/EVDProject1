@@ -72,10 +72,10 @@ private:
     const Size IMG_SIZE = Size(X_RESOLUTION, Y_RESOLUTION);
 
     ImageAnalizer imageAnalizer;
-    Size calculateDigitSize(Mat src);
     Mat berekenDigitAlgorithm(Mat src, vector<vector<Point>> contours);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
+    DigitInfo calculateDigitInfo(Mat src);
     DigitInfo calculateDigitInfoByMultiScaleTemplateMatch(Mat src);
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
