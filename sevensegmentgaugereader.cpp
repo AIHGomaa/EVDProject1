@@ -196,8 +196,8 @@ ImageObject * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedIm
     
 
     // Option 2: Multi-scale template matching
-    //DigitInfo digitInfo = calculateDigitInfoByMultiScaleTemplateMatch(enhancedImage);
-    DigitInfo digitInfo = calculateDigitInfo(enhancedImage);
+    DigitInfo digitInfo = calculateDigitInfoByMultiScaleTemplateMatch(enhancedImage);
+//    DigitInfo digitInfo = calculateDigitInfo(enhancedImage);
 
     qDebug() << "digitInfo by calculateDigitInfo" << digitInfo.width << "*" << digitInfo.height << digitInfo.bottomY;
     //qDebug() << "digitInfo by calculateDigitInfoByMultiScaleTemplateMatch" << digitInfo.width << "*" << digitInfo.height << digitInfo.bottomY;
