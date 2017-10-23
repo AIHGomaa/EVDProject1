@@ -774,10 +774,19 @@ SevenSegmentGaugeReader::DigitInfo SevenSegmentGaugeReader::calculateDigitInfo(M
 
     if (isMatch)
     {
-        //TODO
         int digitW = (int)(maskDigit8p.cols * src.cols / (double)scaledImg.cols + 0.5);
         int digitH = (int)(maskDigit8p.rows * src.rows / (double)scaledImg.rows + 0.5);
-        return DigitInfo(digitW, digitH, imgRow + maskDigit8p.rows);
+        int digitX = (int)(imgCol * src.cols / (double)scaledImg.cols + 0.5);
+        int digitY = (int)(imgRow * src.rows / (double)scaledImg.rows + 0.5);
+
+        //TEST
+        Mat markedMatch;
+        src.copyTo(markedMatch);
+        // draw a bounding box around the detected result and display the image
+        rectangle(markedMatch, Point(digitX, digitY), Point(digitX + digitW, digitY + digitH), Scalar(255, 255, 255), 1);
+        imageAnalizer.showImage("found match:", markedMatch);
+
+        return DigitInfo(digitW, digitH, digitY + digitH);
     }
     else
     {
