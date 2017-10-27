@@ -41,13 +41,15 @@ public:
     bool templayteMatchByEdges = true;
     int templateMatchMethod = TM_CCOEFF;   // TM_SQDIFF_NORMED, TM_SQDIFF
 
+    double templateMatchThreshold = 0.95;
+
     Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 
     SevenSegmentGaugeReader();
-    void EnhanceImage(Mat src, OutputArray dst);
+    void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled);
     void SegmentImage(Mat src, OutputArray dst);
     ImageObject* ExtractFeatures(Mat src, Mat srcOriginal);
-    ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal);
+    ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcScaled);
     ReaderResult Classify(ImageObject *features);
     ReaderResult ReadGaugeImage(Mat src);
     bool loadKNNDataAndTrainKNN();
@@ -56,12 +58,16 @@ public:
     double median(vector<double> collection);
 private:
     typedef struct DigitInfo {
-        int width, height, bottomY;
-        DigitInfo(int width, int height, int bottomY)
+        int width, height, bottomY, leftX, value;
+        double imageScale;
+        DigitInfo(int width, int height, int bottomY, int leftX, int value = -1, double imageScale = 1)
         {
             this->width = width;
             this->height = height;
             this->bottomY = bottomY;
+            this->leftX = leftX;
+            this->value = value;
+            this->imageScale = imageScale;
         }
 
     } DigitInfo;
@@ -70,6 +76,9 @@ private:
     const int X_RESOLUTION = 480;
     const int Y_RESOLUTION = 640;
     const Size IMG_SIZE = Size(X_RESOLUTION, Y_RESOLUTION);
+    const int DIGIT_TEMPLATE_X_RESOLUTION = 60;
+    const int DIGIT_TEMPLATE_Y_RESOLUTION = 80;
+    const Size DIGIT_TEMPLATE_SIZE = Size(DIGIT_TEMPLATE_X_RESOLUTION, DIGIT_TEMPLATE_Y_RESOLUTION);
 
     ImageAnalizer imageAnalizer;
     Mat berekenDigitAlgorithm(Mat src, vector<vector<Point>> contours);
@@ -79,6 +88,7 @@ private:
     DigitInfo calculateDigitInfoByMultiScaleTemplateMatch(Mat src);
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
+    double readDigits(Mat src, DigitInfo digitInfo);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H

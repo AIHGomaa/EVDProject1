@@ -17,7 +17,7 @@ public:
     // https://stackoverflow.com/questions/12854778/abstract-class-vs-interface-in-c:
     // virtual and = 0 makes function abstract.
 //    virtual Mat EnhanceImage(Mat src) = 0;
-    virtual void EnhanceImage(Mat src, OutputArray dst) = 0;
+    virtual void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled) = 0;
     virtual void SegmentImage(Mat src, OutputArray dst) = 0;
     virtual ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal) = 0;
     virtual ReaderResult Classify(ImageObject* features) = 0;

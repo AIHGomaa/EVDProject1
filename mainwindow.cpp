@@ -54,6 +54,8 @@ void MainWindow::configGaugeReader()
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
     gr->referenceImageDir = referenceImageDir.toStdString();
 
+    gr->templateMatchThreshold = ui->spnTemplateMatchThreshold->value();
+
     //TODO: training not in main read proces, separate button action, store training data, load training data on start reader.
     bool blnKNNTrainingSuccessful =  gr->loadKNNDataAndTrainKNN();
     if (blnKNNTrainingSuccessful == false) {
@@ -80,16 +82,19 @@ void MainWindow::on_btnReadImageValue_clicked()
     //    imageAnalizer.resetNextWindowPosition();
     //    imageAnalizer.showImage("MainWindow: Original image", src);
 
-    Mat enhanced, segmented;
+    Mat enhanced, segmented, srcScaled;
 
     configGaugeReader();
 
-    gaugeReader->EnhanceImage(src, enhanced);
+    gaugeReader->EnhanceImage(src, enhanced, srcScaled);
+
+    imageAnalizer.resetNextWindowPosition();
+    imageAnalizer.showImage("MainWindow srcScaled", srcScaled);
 
     //TODO? na rotatiecorrectie: pre-roi voor contours
 
     gaugeReader->SegmentImage(enhanced, segmented);
-    gaugeReader->ExtractFeatures(segmented, enhanced, src);
+    gaugeReader->ExtractFeatures(segmented, enhanced, srcScaled);
 
     //    imageAnalizer.resetNextWindowPosition();
     //imageAnalizer.showImage("MainWindow: Original image", src);
@@ -163,6 +168,11 @@ void MainWindow::on_spnDigitDilateKernelWidth_valueChanged()
 }
 
 void MainWindow::on_spnDigitDilateKernelHeight_valueChanged()
+{
+    on_btnReadImageValue_clicked();
+}
+
+void MainWindow::on_spnTemplateMatchThreshold_valueChanged()
 {
     on_btnReadImageValue_clicked();
 }

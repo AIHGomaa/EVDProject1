@@ -55,6 +55,8 @@ private slots:
 
     void on_spnDigitDilateKernelHeight_valueChanged();
 
+    void on_spnTemplateMatchThreshold_valueChanged();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory
