@@ -8,6 +8,7 @@
 #include "opencv2/opencv.hpp"
 #include "igaugereader.h"
 #include "imageanalizer.h"
+#include "digitfeatures.h"
 
 using namespace cv;
 using namespace std;
@@ -15,6 +16,20 @@ using namespace std;
 class SevenSegmentGaugeReader : public IGaugeReader
 {
 public:
+    enum ShowImageFlags {
+        SHOW_NONE = 0x00,
+        SHOW_IMAGE_ENHANCEMENT_FLAG = 0x01,
+        SHOW_SEGMENTATION_FLAG = 0x02,
+        SHOW_FEATURE_EXTRACTION_FLAG = 0x04,
+        SHOW_CLASSIFICATION_FLAG = 0x08,
+        SHOW_ROTATION_CORRECTION_FLAG = 0x10,
+        SHOW_KNN_TRAINING_FLAG = 0x20,
+        SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG = 0x40,
+        SHOW_MAIN_RESULTS_FLAG = 0x100
+    };
+
+    uint showImageFlags = SHOW_FEATURE_EXTRACTION_FLAG | SHOW_MAIN_RESULTS_FLAG;
+
     int adaptiveThresholdBlockSize = 35;
     int adaptivethresholdC = -25;
     int gaussianBlurSize = 3;
@@ -33,13 +48,13 @@ public:
     double houghMaxLineGap = 20;
 
     int digitDilateKernelWidth = 1;
-    int digitDilateKernelHeight = 5;
+    int digitDilateKernelHeight = 7;
 
     //TODO: configure in UI
     int templateMatchCannyThreshold1 = 50;
     int templateMatchCannyThreshold2 = 50 * 4;
     bool templayteMatchByEdges = true;
-    int templateMatchMethod = TM_CCOEFF;   // TM_SQDIFF_NORMED, TM_SQDIFF
+    int templateMatchMethod = TM_CCOEFF; // TM_SQDIFF_NORMED, TM_SQDIFF
 
     double templateMatchThreshold = 0.95;
 
@@ -48,31 +63,13 @@ public:
     SevenSegmentGaugeReader();
     void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled);
     void SegmentImage(Mat src, OutputArray dst);
-    ImageObject* ExtractFeatures(Mat src, Mat srcOriginal);
-    ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcScaled);
-    ReaderResult Classify(ImageObject *features);
+    DigitFeatures* ExtractFeatures(Mat src, Mat srcOriginal);
+    DigitFeatures* ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage);
+    ReaderResult Classify(DigitFeatures *features);
     ReaderResult ReadGaugeImage(Mat src);
     bool loadKNNDataAndTrainKNN();
 
-    //TODO: in separate class
-    double median(vector<double> collection);
 private:
-    typedef struct DigitInfo {
-        int width, height, bottomY, leftX, value;
-        double imageScale;
-        DigitInfo(int width, int height, int bottomY, int leftX, int value = -1, double imageScale = 1)
-        {
-            this->width = width;
-            this->height = height;
-            this->bottomY = bottomY;
-            this->leftX = leftX;
-            this->value = value;
-            this->imageScale = imageScale;
-        }
-
-    } DigitInfo;
-
-    //TODO: keep source image aspect ratio
     const int X_RESOLUTION = 480;
     const int Y_RESOLUTION = 640;
     const Size IMG_SIZE = Size(X_RESOLUTION, Y_RESOLUTION);
@@ -81,14 +78,15 @@ private:
     const Size DIGIT_TEMPLATE_SIZE = Size(DIGIT_TEMPLATE_X_RESOLUTION, DIGIT_TEMPLATE_Y_RESOLUTION);
 
     ImageAnalizer imageAnalizer;
-    Mat berekenDigitAlgorithm(Mat src, vector<vector<Point>> contours);
+    Mat classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName);
-    DigitInfo calculateDigitInfo(Mat src);
-    DigitInfo calculateDigitInfoByMultiScaleTemplateMatch(Mat src);
+    DigitFeatures extractDigitFeaturesByCustomTemplateMatching(Mat src);
+    DigitFeatures extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src);
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
-    double readDigits(Mat src, DigitInfo digitInfo);
+    double classifyDigitsByTemplateMatching(Mat src, DigitFeatures digitFeatures);
+    double median(vector<double> collection);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H

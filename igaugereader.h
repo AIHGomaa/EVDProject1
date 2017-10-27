@@ -5,8 +5,8 @@
 #include "opencv/cv.h"
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
-#include "imageobject.h"
 #include "readerresult.h"
+#include "digitfeatures.h"
 
 using namespace cv;
 
@@ -19,8 +19,8 @@ public:
 //    virtual Mat EnhanceImage(Mat src) = 0;
     virtual void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled) = 0;
     virtual void SegmentImage(Mat src, OutputArray dst) = 0;
-    virtual ImageObject* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal) = 0;
-    virtual ReaderResult Classify(ImageObject* features) = 0;
+    virtual DigitFeatures* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal) = 0;
+    virtual ReaderResult Classify(DigitFeatures* features) = 0;
     virtual ReaderResult ReadGaugeImage(Mat src) = 0;
     virtual bool loadKNNDataAndTrainKNN() = 0;
 };

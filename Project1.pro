@@ -26,20 +26,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    imageobject.cpp \
     sevensegmentgaugereader.cpp \
     measureunit.cpp \
     readerresult.cpp \
-    imageanalizer.cpp
+    imageanalizer.cpp \
+    digitfeatures.cpp
 
 HEADERS += \
         mainwindow.h \
-    imageobject.h \
     sevensegmentgaugereader.h \
     measureunit.h \
     readerresult.h \
     igaugereader.h \
-    imageanalizer.h
+    imageanalizer.h \
+    digitfeatures.h
 
 FORMS += \
         mainwindow.ui
