@@ -1,6 +1,6 @@
-#include "digitfeatures.h"
+#include "sevensegmentdigitfeatures.h"
 
-DigitFeatures::DigitFeatures(int width, int height, int bottomY, int leftX, int value, double imageScale)
+SevenSegmentDigitFeatures::SevenSegmentDigitFeatures(int width, int height, int bottomY, int leftX, int value, double imageScale)
 {
     this->width = width;
     this->height = height;

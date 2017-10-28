@@ -30,7 +30,8 @@ SOURCES += \
     measureunit.cpp \
     readerresult.cpp \
     imageanalizer.cpp \
-    digitfeatures.cpp
+    sevensegmentdigitcriteria.cpp \
+    sevensegmentdigitfeatures.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -39,7 +40,8 @@ HEADERS += \
     readerresult.h \
     igaugereader.h \
     imageanalizer.h \
-    digitfeatures.h
+    sevensegmentdigitcriteria.h \
+    sevensegmentdigitfeatures.h
 
 FORMS += \
         mainwindow.ui

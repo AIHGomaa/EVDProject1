@@ -37,15 +37,14 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray
     
     adaptThreshold.copyTo(dst);
     
-    // Only for test
-    //    imageAnalizer.resetNextWindowPosition();
-    //    imageAnalizer.showImage("EnhanceImage: src", src);
-    //    imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
-    //    imageAnalizer.showImage("EnhanceImage: blurred", blurred);
-    //    imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
-    //    imageAnalizer.showImage("EnhanceImage: filteredGaussian", filteredGaussian);
-    //    imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
-    
+    if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG) {
+        imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("EnhanceImage: src", src);
+        imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
+        imageAnalizer.showImage("EnhanceImage: blurred", blurred);
+        imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
+        imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
+    }
 }
 
 void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
@@ -55,10 +54,11 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     
     cannyEdges.copyTo(dst);
     
-    // Only for test
-    //     imageAnalizer.resetNextWindowPosition();
-    //     imageAnalizer.showImage("SegmentImage: src", src);
-    //     imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
+    if(showImageFlags & SHOW_SEGMENTATION_FLAG) {
+        imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("SegmentImage: src", src);
+        imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
+    }
 }
 
 double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
@@ -128,7 +128,31 @@ void SevenSegmentGaugeReader::correctRotation(double rotationDegrees, Mat srcCol
     reEnhancedAfterWarp.copyTo(dstGrayScale);
 }
 
-DigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage)
+bool SevenSegmentGaugeReader::isPotentialDigitOrDecimalPoint(Rect rect, SevenSegmentDigitCriteria criteria)
+{
+    return
+            // All on reference botom Y
+            rect.br().y >= criteria.minDigitBottomY &&
+            rect.br().y <= criteria.maxDigitBottomY &&
+            // Size of digits 0 and 2..9
+            ((rect.height >= criteria.minDigitSize.height && rect.height <= criteria.maxDigitSize.height &&
+              rect.width >= criteria.minDigitSize.width && rect.width <= criteria.maxDigitSize.width) ||
+             // Size of digit 1
+             (rect.height >= criteria.minDigit1Size.height && rect.height <= criteria.maxDigit1Size.height &&
+              rect.width >= criteria.minDigit1Size.width && rect.width <= criteria.maxDigit1Size.width) ||
+             // Size of decimal point
+             (rect.height >= criteria.minDecimalPointSize.height && rect.height <= criteria.maxDecimalPointSize.height &&
+              rect.width >= criteria.minDecimalPointSize.width && rect.width <= criteria.maxDecimalPointSize.width));
+}
+
+bool SevenSegmentGaugeReader::contourLeftToRightComparer(const vector<Point> a, const vector<Point> b)
+{
+    Rect ra(boundingRect(a));
+    Rect rb(boundingRect(b));
+    return (ra.x < rb.x);
+}
+
+SevenSegmentDigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage)
 {
     double rotationDegrees = calculateRotationDegrees(edges);
 
@@ -140,12 +164,16 @@ DigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhanced
     // Extract features for one reference digit, to determine the desired image scale.
     // This is necessary for accuracy of findContours(),
     // because we optimize our kernels for a fixed digit size.
-    DigitFeatures referenceDigitFeatures = extractReferenceDigitFeaturesByMultiScaleTemplateMatch(enhancedImage);
+    SevenSegmentDigitFeatures referenceDigitFeatures = extractReferenceDigitFeaturesByMultiScaleTemplateMatch(enhancedImage);
+
+    double imageScaleFactor = DIGIT_TEMPLATE_Y_RESOLUTION / (double)referenceDigitFeatures.height;
+
+    SevenSegmentDigitCriteria criteria =
+            SevenSegmentDigitCriteria::create(referenceDigitFeatures, DIGIT_TEMPLATE_SIZE, imageScaleFactor);
 
     qDebug() << "referenceDigitFeatures" << referenceDigitFeatures.width << "*" << referenceDigitFeatures.height << referenceDigitFeatures.bottomY;
 
     // Resize image to get desired digit size
-    double imageScaleFactor = DIGIT_TEMPLATE_Y_RESOLUTION / (double)referenceDigitFeatures.height;
     Mat enhancedResized;
     Mat colorResized;
     resize(enhancedImage, enhancedResized, Size(0, 0), imageScaleFactor, imageScaleFactor, INTER_LINEAR);
@@ -162,38 +190,29 @@ DigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhanced
     Mat dilatedEnhancedInverted;
     dilate(enhancedResizedInverted, dilatedEnhancedInverted, dilateKernel);
 
-    // The feature extraction
-
     // Derived from https://docs.opencv.org/trunk/d6/d6e/group__imgproc__draw.html#ga746c0625f1781f1ffc9056259103edbc
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
+
+    Rect roiRect(0, criteria.maxDigitBottomY - criteria.maxDigit1Size.height, dilatedEnhancedInverted.cols, criteria.maxDigit1Size.height);
+    Mat contoursRoi = Mat(dilatedEnhancedInverted, roiRect);
+
     // Edges must be white, background must be black.
-    //TODO: minimize search by roi in image, based on requirements. (offset parameter must be used).
-    findContours(dilatedEnhancedInverted, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    //    findContours(dilatedEnhancedInverted, contours, hierarchy, RETR_LIST, CHAIN_APPROX_SIMPLE);
+    findContours(contoursRoi, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(roiRect.tl()));
+    // findContours(dilatedEnhancedInverted, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    // findContours(dilatedEnhancedInverted, contours, hierarchy, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
     qDebug() << "contours.size() " << contours.size();
     
-    //TODO: refactor
-    //Sort contours from left to right
-    struct contour_sorter
-    {
-        bool operator ()(const vector<Point> a, const vector<Point> b)
-        {
-            Rect ra(boundingRect(a));
-            Rect rb(boundingRect(b));
-            return (ra.x < rb.x);
-        }
-    };
-    sort(contours.begin(), contours.end(), contour_sorter());
+    sort(contours.begin(), contours.end(), contourLeftToRightComparer);
     
-    vector<vector<Point>> contours_poly( contours.size() );
+    vector<vector<Point>> contoursPoly( contours.size() );
     vector<Rect> boundRect( contours.size() );
 
     // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
-    for( uint i = 0; i < contours.size(); i++ ) {
-        approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
-        boundRect[i] = boundingRect(Mat(contours_poly[i]));
+    for(uint i = 0; i < contours.size(); i++) {
+        approxPolyDP(Mat(contours[i]), contoursPoly[i], 3, true);
+        boundRect[i] = boundingRect(Mat(contoursPoly[i]));
     }
 
     Mat colorResizedFiltered;
@@ -219,28 +238,12 @@ DigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhanced
 
     vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
-    //TODO: configurable in ui
-    //    double digitSizeTolerance = 0.5;
-    double digitYTolerance = 0.03;
-    //TOOD: use imageScaleFactor for size
-    //    Size minDigitSize = Size(digitInfo.width * (1 - digitSizeTolerance) + 0.5, digitInfo.height * (1 - digitSizeTolerance) + 0.5);
-    //    Size maxDigitSize = Size(digitInfo.width * (1 + digitSizeTolerance) + 0.5, digitInfo.height * (1 + digitSizeTolerance) + 0.5);
-    int minDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 - digitYTolerance) + 0.5;
-    int maxDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 + digitYTolerance) + 0.5;
-
     Scalar contourColor = Scalar(0,255,0);
     Scalar textColor = Scalar(255,255,255);
 
     for(uint i = 0; i < boundRect.size(); i++) {
         Rect rect = boundRect[i];
-        
-        //        int width = rect.width;
-        //        int height = rect.height;
-
-        if( //height >= minDigitSize.height && height <= maxDigitSize.height &&
-                //width>= minDigitSize.width && width <= maxDigitSize.width)
-                rect.br().y >= minDigitBottomY &&
-                rect.br().y <= maxDigitBottomY) {
+        if( showAllContoursForTest || isPotentialDigitOrDecimalPoint(rect, criteria)) {
             Mat imageroi = colorResizedFiltered(rect);
             imageroi.convertTo(imageroi, CV_32F);
             Mat roi, sample;
@@ -262,8 +265,13 @@ DigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhanced
             bool found = find(values.begin(), values.end(), charValue) != values.end();
             if (found == true)
             {
-                rectangle( drawing, rect.tl(), rect.br(), contourColor, 2, LINE_4, 0 );
-                putText(drawing, charValue, Point(rect.br().x - DIGIT_TEMPLATE_SIZE.width, referenceDigitFeatures.bottomY * imageScaleFactor + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, textColor, 3);
+                rectangle(drawing, rect.tl(), rect.br(), contourColor, 2, LINE_4, 0);
+                int textX = rect.br().x;
+                if (val != 10)  // Exception for "."
+                    textX -= DIGIT_TEMPLATE_SIZE.width / 2;
+                putText(drawing, charValue, Point(textX, referenceDigitFeatures.bottomY * imageScaleFactor + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, textColor, 3);
+
+                //                putText(drawing, charValue, Point(rect.br().x - DIGIT_TEMPLATE_SIZE.width / 2, referenceDigitFeatures.bottomY * imageScaleFactor + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, textColor, 3);
                 //final number
                 number += charValue;
             }
@@ -278,16 +286,18 @@ DigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhanced
     {
         imageAnalizer.resetNextWindowPosition();
         imageAnalizer.showImage("Feature extract: enhancedImage", enhancedImage);
-//        imageAnalizer.showImage("Feature extract: edges dilated", dilatedEdges);
+        //        imageAnalizer.showImage("Feature extract: edges dilated", dilatedEdges);
         imageAnalizer.showImage("Feature extract: enhancedResizedInverted", enhancedResizedInverted);
         imageAnalizer.showImage("Feature extract: dilatedEnhancedInverted", dilatedEnhancedInverted);
         imageAnalizer.showImage("Feature extract: colorResized", colorResized);
         imageAnalizer.showImage("Feature extract: colorResizedFiltered", colorResizedFiltered);
+        imageAnalizer.showImage("Feature extract: contoursRoi", contoursRoi);
+        imageAnalizer.resetNextWindowPosition();
         imageAnalizer.showImage("Feature extract: markedDigits", markedDigits);
     }
 
     //TODO
-    DigitFeatures * result = new DigitFeatures(0, 0, 0, 0);
+    SevenSegmentDigitFeatures * result = new SevenSegmentDigitFeatures(0, 0, 0, 0);
 
     return result;
 }
@@ -298,50 +308,50 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     Mat samples;
     vector<int> responseLabels;
     for (int i = 0; i < 21; i++) {
-        string path;
+        string fileName;
         if (i >= 10) {
             switch (i)
             {
             case 11:
-                path = referenceImageDir + "BottomArrow.png";
+                fileName = "BottomArrow.png";
                 break;
             case 12:
-                path = referenceImageDir + "ESC.png";
+                fileName = "ESC.png";
                 break;
             case 13:
-                path = referenceImageDir + "KG.png";
+                fileName = "KG.png";
                 break;
             case 14:
-                path = referenceImageDir + "L2.png";
+                fileName = "L2.png";
                 break;
             case 15:
-                path = referenceImageDir + "L3.png";
+                fileName = "L3.png";
                 break;
             case 16:
-                path = referenceImageDir + "L4.png";
+                fileName = "L4.png";
                 break;
             case 17:
-                path = referenceImageDir + "LeftArrow.png";
+                fileName = "LeftArrow.png";
                 break;
             case 18:
-                path = referenceImageDir + "LeftArrow2.png";
+                fileName = "LeftArrow2.png";
                 break;
             case 19:
-                path = referenceImageDir + "RedSquares.png";
+                fileName = "RedSquares.png";
                 break;
             case 20:
-                path = referenceImageDir + "RightArrow.png";
+                fileName = "RightArrow.png";
                 break;
             default:
-                path = referenceImageDir + "Point_Color.png";
+                fileName = "Point_Color.png";
                 break;
             }
         }
         else
         {
-            path = referenceImageDir + "Digit" + to_string(i) + "_Color.png";
+            fileName = "Digit" + to_string(i) + "_Color.png";
         }
-        Mat img = imread(path);
+        Mat img = loadReferenceImage(fileName, IMREAD_COLOR);
         responseLabels.push_back(i);
 
         // First convert to desired template size, next to single row matrix.
@@ -354,7 +364,7 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     kNearest->train(samples, ml::ROW_SAMPLE, responseLabels);
 
     //TODO?
-    kNearest->save("test.yml");
+    kNearest->save("kNearest.yml");
 
     if (showImageFlags & SHOW_KNN_TRAINING_FLAG) {
         imageAnalizer.resetNextWindowPosition();
@@ -374,7 +384,7 @@ double SevenSegmentGaugeReader::median(vector<double> collection)
         return collection[size / 2];
 }
 
-ReaderResult SevenSegmentGaugeReader::Classify(DigitFeatures *features)
+ReaderResult SevenSegmentGaugeReader::Classify(SevenSegmentDigitFeatures *features)
 {
     return ReaderResult();
 }
@@ -387,10 +397,10 @@ ReaderResult SevenSegmentGaugeReader::ReadGaugeImage(Mat src)
     return Classify(ExtractFeatures(segmented, enhanced, srcScaled));
 }
 
-Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName)
+Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName, int flags)
 {
     string path = referenceImageDir + fileName;
-    Mat dst = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat dst = imread(path, flags);
     if(!dst.data)
     {
         qDebug() << QString::fromStdString(path) << " can not be loaded";
@@ -519,7 +529,7 @@ vector<Point2d> SevenSegmentGaugeReader::getPoint(Point2d p1 , Point2d p2) {
     return segment;
 }
 
-DigitFeatures SevenSegmentGaugeReader::extractDigitFeaturesByCustomTemplateMatching(Mat src)
+SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractDigitFeaturesByCustomTemplateMatching(Mat src)
 {
     imageAnalizer.resetNextWindowPosition();
     imageAnalizer.showImage("calculateDigitSize: src", src);
@@ -777,13 +787,13 @@ DigitFeatures SevenSegmentGaugeReader::extractDigitFeaturesByCustomTemplateMatch
         rectangle(markedMatch, Point(digitX, digitY), Point(digitX + digitW, digitY + digitH), Scalar(255, 255, 255), 1);
         imageAnalizer.showImage("found match:", markedMatch);
 
-        return DigitFeatures(digitW, digitH, digitY + digitH, digitX);
+        return SevenSegmentDigitFeatures(digitW, digitH, digitY + digitH, digitX);
     }
     else
     {
         qDebug() << "No digits recognized";
 
-        return DigitFeatures(0, 0, src.rows-1, 0);
+        return SevenSegmentDigitFeatures(0, 0, src.rows-1, 0);
         //throw Exception(0, "No digits recognized", "calculateDigitSize", "SevenSegmentGaugeReader.cpp", 0);
     }
 }
@@ -799,7 +809,7 @@ typedef struct TemplateMatchFeatures {
     TemplateMatchFeatures(): init(0){}
 } TemplateMatchFeatures;
 
-double SevenSegmentGaugeReader::classifyDigitsByTemplateMatching(Mat src, DigitFeatures digitFeatures)
+double SevenSegmentGaugeReader::classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures)
 {
     Mat scaledImage;
     resize(src, scaledImage, Size(0,0), digitFeatures.imageScale, digitFeatures.imageScale);
@@ -828,7 +838,7 @@ double SevenSegmentGaugeReader::classifyDigitsByTemplateMatching(Mat src, DigitF
     int marginH = 20;
     Rect roiRect(0, digitFeatures.bottomY - digitFeatures.height - marginH, src.cols, digitFeatures.bottomY + marginH);
     Mat roi = src(roiRect);
-    vector<DigitFeatures> recognizedDigits;
+    vector<SevenSegmentDigitFeatures> recognizedDigits;
 
     imageAnalizer.resetNextWindowPosition();
 
@@ -870,7 +880,7 @@ double SevenSegmentGaugeReader::classifyDigitsByTemplateMatching(Mat src, DigitF
                     {
                         qDebug() << "digit added to result: " << i;
                         endResultMat.at<uchar>(r, c) = px;
-                        recognizedDigits.push_back(DigitFeatures(digitFeatures.width, digitFeatures.height, r + digitFeatures.height, c, i));
+                        recognizedDigits.push_back(SevenSegmentDigitFeatures(digitFeatures.width, digitFeatures.height, r + digitFeatures.height, c, i));
                     }
                 }
             }
@@ -886,7 +896,7 @@ double SevenSegmentGaugeReader::classifyDigitsByTemplateMatching(Mat src, DigitF
 // Derived from https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
 // (C++ translation on http://hassannadeem.com/assets/code/multi_scale_template_matching_cpp.zip)
 // and https://docs.opencv.org/3.3.0/da/d53/MatchTemplate_Demo_8cpp-example.html#a15
-DigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src)
+SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src)
 {
     Mat templateDigit8p = loadReferenceImage("MaskDigit8SegmentP_30x40.png");
     Mat scaledImage;
@@ -979,5 +989,5 @@ DigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeaturesByMultiScale
     }
 
     //TODO: handle not found
-    return DigitFeatures(endX - startX, endY - startY, endY, startX, -1, foundMatchInfo.scale);
+    return SevenSegmentDigitFeatures(endX - startX, endY - startY, endY, startX, -1, foundMatchInfo.scale);
 }

@@ -8,7 +8,8 @@
 #include "opencv2/opencv.hpp"
 #include "igaugereader.h"
 #include "imageanalizer.h"
-#include "digitfeatures.h"
+#include "sevensegmentdigitfeatures.h"
+#include "sevensegmentdigitcriteria.h"
 
 using namespace cv;
 using namespace std;
@@ -29,6 +30,9 @@ public:
     };
 
     uint showImageFlags = SHOW_FEATURE_EXTRACTION_FLAG | SHOW_MAIN_RESULTS_FLAG;
+
+    //TODO: configurable in UI
+    bool showAllContoursForTest = false;
 
     int adaptiveThresholdBlockSize = 35;
     int adaptivethresholdC = -25;
@@ -63,9 +67,9 @@ public:
     SevenSegmentGaugeReader();
     void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled);
     void SegmentImage(Mat src, OutputArray dst);
-    DigitFeatures* ExtractFeatures(Mat src, Mat srcOriginal);
-    DigitFeatures* ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage);
-    ReaderResult Classify(DigitFeatures *features);
+    SevenSegmentDigitFeatures* ExtractFeatures(Mat src, Mat srcOriginal);
+    SevenSegmentDigitFeatures* ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage);
+    ReaderResult Classify(SevenSegmentDigitFeatures *features);
     ReaderResult ReadGaugeImage(Mat src);
     bool loadKNNDataAndTrainKNN();
 
@@ -80,13 +84,15 @@ private:
     ImageAnalizer imageAnalizer;
     Mat classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
-    Mat loadReferenceImage(string fileName);
-    DigitFeatures extractDigitFeaturesByCustomTemplateMatching(Mat src);
-    DigitFeatures extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src);
+    Mat loadReferenceImage(string fileName, int flags = CV_LOAD_IMAGE_GRAYSCALE);
+    SevenSegmentDigitFeatures extractDigitFeaturesByCustomTemplateMatching(Mat src);
+    SevenSegmentDigitFeatures extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src);
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
-    double classifyDigitsByTemplateMatching(Mat src, DigitFeatures digitFeatures);
+    double classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures);
     double median(vector<double> collection);
+    bool isPotentialDigitOrDecimalPoint(Rect rect, SevenSegmentDigitCriteria criteria);
+    static bool contourXpositionComparer(const vector<Point> a, const vector<Point> b);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
