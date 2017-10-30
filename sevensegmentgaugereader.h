@@ -92,7 +92,7 @@ private:
     double classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures);
     double median(vector<double> collection);
     bool isPotentialDigitOrDecimalPoint(Rect rect, SevenSegmentDigitCriteria criteria);
-    static bool contourXpositionComparer(const vector<Point> a, const vector<Point> b);
+    static bool contourLeftToRightComparer(const vector<Point> a, const vector<Point> b);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
