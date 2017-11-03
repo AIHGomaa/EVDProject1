@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Read image value</string>
+     <string>Read image</string>
     </property>
    </widget>
    <widget class="QSpinBox" name="spnEnhancementadaptiveThresholdBlockSize">
@@ -572,6 +572,32 @@
     </property>
     <property name="value">
      <double>0.850000000000000</double>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnReadCameraImage">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>30</y>
+      <width>111</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Read camera capture</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="chkShowMainImages">
+    <property name="geometry">
+     <rect>
+      <x>580</x>
+      <y>30</y>
+      <width>121</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show main images</string>
     </property>
    </widget>
   </widget>

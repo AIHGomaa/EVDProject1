@@ -8,6 +8,7 @@
 #include "opencv2/opencv.hpp"
 #include "igaugereader.h"
 #include "imageanalizer.h"
+#include "templatematchfeatures.h"
 #include "sevensegmentdigitfeatures.h"
 #include "sevensegmentdigitcriteria.h"
 
@@ -29,7 +30,7 @@ public:
         SHOW_MAIN_RESULTS_FLAG = 0x100
     };
 
-    uint showImageFlags = SHOW_FEATURE_EXTRACTION_FLAG | SHOW_MAIN_RESULTS_FLAG;
+    uint showImageFlags = SHOW_MAIN_RESULTS_FLAG;
 
     //TODO: configurable in UI
     bool showAllContoursForTest = false;
@@ -65,14 +66,13 @@ public:
     Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 
     SevenSegmentGaugeReader();
+    void initialize();
     void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled);
     void SegmentImage(Mat src, OutputArray dst);
     SevenSegmentDigitFeatures* ExtractFeatures(Mat src, Mat srcOriginal);
     SevenSegmentDigitFeatures* ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage);
     ReaderResult Classify(SevenSegmentDigitFeatures *features);
     ReaderResult ReadGaugeImage(Mat src);
-    bool loadKNNDataAndTrainKNN();
-
 private:
     const int X_RESOLUTION = 480;
     const int Y_RESOLUTION = 640;
@@ -85,8 +85,8 @@ private:
     Mat classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours);
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName, int flags = CV_LOAD_IMAGE_GRAYSCALE);
-    SevenSegmentDigitFeatures extractDigitFeaturesByCustomTemplateMatching(Mat src);
     SevenSegmentDigitFeatures extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src);
+    bool loadKNNDataAndTrainKNN();
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
     double classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures);

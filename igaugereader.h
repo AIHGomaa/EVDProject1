@@ -22,7 +22,6 @@ public:
     virtual SevenSegmentDigitFeatures* ExtractFeatures(Mat edges, Mat enhancedImage, Mat srcOriginal) = 0;
     virtual ReaderResult Classify(SevenSegmentDigitFeatures* features) = 0;
     virtual ReaderResult ReadGaugeImage(Mat src) = 0;
-    virtual bool loadKNNDataAndTrainKNN() = 0;
 };
 
 #endif // IGAUGEREADER_H

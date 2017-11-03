@@ -31,7 +31,8 @@ SOURCES += \
     readerresult.cpp \
     imageanalizer.cpp \
     sevensegmentdigitcriteria.cpp \
-    sevensegmentdigitfeatures.cpp
+    sevensegmentdigitfeatures.cpp \
+    templatematchfeatures.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -41,7 +42,8 @@ HEADERS += \
     igaugereader.h \
     imageanalizer.h \
     sevensegmentdigitcriteria.h \
-    sevensegmentdigitfeatures.h
+    sevensegmentdigitfeatures.h \
+    templatematchfeatures.h
 
 FORMS += \
         mainwindow.ui

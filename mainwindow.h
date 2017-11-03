@@ -57,6 +57,8 @@ private slots:
 
     void on_spnTemplateMatchThreshold_valueChanged();
 
+    void on_btnReadCameraImage_clicked();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory
@@ -64,8 +66,10 @@ private:
     QString testImageDir = "testImages\\";
     IGaugeReader *gaugeReader;
     ImageAnalizer imageAnalizer;
+    Mat srcImage;
 
     void configGaugeReader();
+    void processImage();
 };
 
 #endif // MAINWINDOW_H
