@@ -59,6 +59,20 @@ private slots:
 
     void on_btnReadCameraImage_clicked();
 
+    void on_chkShowMainImages_clicked();
+
+    void on_chkShowEnhancementImages_clicked();
+
+    void on_chkShowSegmentationImages_clicked();
+
+    void on_chkShowFeatureExtractionImages_clicked();
+
+    void on_chkShowFeatureExtractReferenceDigitImages_clicked();
+
+    void on_chkShowClassificationImages_clicked();
+
+    void on_chkShowFeatureExtractKnnTraining_clicked();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory

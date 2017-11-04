@@ -11,7 +11,6 @@ SevenSegmentGaugeReader::SevenSegmentGaugeReader()
 void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled)
 {
     Mat grayScaled(src.rows, src.cols, CV_8UC1);
-    //    Mat sizeScaled;
     Mat adaptThreshold(IMG_SIZE, CV_8UC1);
     Mat blurred(IMG_SIZE, CV_8UC1);
     //    Mat filteredGaussian(IMG_SIZE, CV_8UC1);
@@ -21,15 +20,12 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray
 
     cvtColor(srcScaled, grayScaled, COLOR_RGB2GRAY);
     imageAnalizer.resetNextWindowPosition();
-    //    imageAnalizer.showImage("sizeScaled", sizeScaled);
     
     // Blur is too strong on lowest resolution of Honeywell Dolphin. Maybe useful for higher resolutions
-    
     //    blur(grayScaled, blurred, Size(gaussianBlurSize, gaussianBlurSize));
     GaussianBlur(grayScaled, blurred, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);  // remove small noise
     
     // Canny without adaptiveThreshold gives better result.
-    
     // THRESH_BINARY_INV: Display segments are lighted. We need black segments.
     adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
     
@@ -98,7 +94,7 @@ double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
     if (showImageFlags & SHOW_ROTATION_CORRECTION_FLAG)
     {
         imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("Feature extract: disp_lines", disp_lines);
+        imageAnalizer.showImage("calculateRotationDegrees(): disp_lines", disp_lines);
     }
 
     return medianAngleDegr;
@@ -158,12 +154,11 @@ bool SevenSegmentGaugeReader::contourLeftToRightComparer(const vector<Point> a, 
     return (ra.x < rb.x);
 }
 
-SevenSegmentDigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage)
+vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage, OutputArray colorResized, OutputArray colorResizedFiltered)
 {
     double rotationDegrees = calculateRotationDegrees(edges);
 
     //TODO: configurable
-    //TODO: in EnhanceImage?
     if(abs(rotationDegrees) > 0.5)
         correctRotation(rotationDegrees, colorImage, enhancedImage, colorImage, enhancedImage);
 
@@ -174,17 +169,15 @@ SevenSegmentDigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, 
     if (referenceDigitFeatures.width == 0)
     {
         // no matching digit found
-        return &referenceDigitFeatures;
+        vector<SevenSegmentDigitFeatures> result;
+        return result;
     }
 
     double imageScaleFactor = DIGIT_TEMPLATE_Y_RESOLUTION / (double)referenceDigitFeatures.height;
-
-    SevenSegmentDigitCriteria criteria =
-            SevenSegmentDigitCriteria::create(referenceDigitFeatures, DIGIT_TEMPLATE_SIZE, imageScaleFactor);
+    digitCriteria = SevenSegmentDigitCriteria::create(referenceDigitFeatures, DIGIT_TEMPLATE_SIZE, imageScaleFactor);
 
     // Resize image to get desired digit size
     Mat enhancedResized;
-    Mat colorResized;
     resize(enhancedImage, enhancedResized, Size(0, 0), imageScaleFactor, imageScaleFactor, INTER_LINEAR);
     resize(colorImage, colorResized, Size(0, 0), imageScaleFactor, imageScaleFactor, INTER_LINEAR);
     threshold(enhancedResized, enhancedResized, 127, 255, THRESH_BINARY);
@@ -203,7 +196,7 @@ SevenSegmentDigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, 
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
 
-    Rect roiRect(0, criteria.maxDigitBottomY - criteria.maxDigit1Size.height, dilatedEnhancedInverted.cols, criteria.maxDigit1Size.height);
+    Rect roiRect(0, digitCriteria.maxDigitBottomY - digitCriteria.maxDigit1Size.height, dilatedEnhancedInverted.cols, digitCriteria.maxDigit1Size.height);
     Mat contoursRoi = Mat(dilatedEnhancedInverted, roiRect);
 
     // Edges must be white, background must be black.
@@ -216,93 +209,18 @@ SevenSegmentDigitFeatures * SevenSegmentGaugeReader::ExtractFeatures(Mat edges, 
     sort(contours.begin(), contours.end(), contourLeftToRightComparer);
     
     vector<vector<Point>> contoursPoly( contours.size() );
-    vector<Rect> boundRect( contours.size() );
+    //    vector<SevenSegmentDigitFeatures> result( contours.size() );
+    vector<SevenSegmentDigitFeatures> result;
 
     // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
     for(uint i = 0; i < contours.size(); i++) {
         approxPolyDP(Mat(contours[i]), contoursPoly[i], 3, true);
-        boundRect[i] = boundingRect(Mat(contoursPoly[i]));
+        SevenSegmentDigitFeatures df = SevenSegmentDigitFeatures(boundingRect(Mat(contoursPoly[i])));
+        result.push_back(df);
     }
 
-    Mat colorResizedFiltered;
-    string number;
-
-    // Option 1
-    //    markedDigits = berekenDigitAlgorithm(dilatedEnhancedInverted, contours);
-
-    // Option 3: K-nearest
-
-    // Option 4
-    //classifyDigitsByTemplateMatching(enhancedImage, referenceDigitFeatures);
-
-    //TODO: in classification
     // Filter color image by binary image.
     colorResized.copyTo(colorResizedFiltered, enhancedResizedInverted);
-
-    Mat markedDigits;
-    colorResized.copyTo(markedDigits);
-    Mat drawing(markedDigits);
-
-    vector<string> values { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
-
-    Scalar contourColor = Scalar(0,255,0);
-    Scalar textColor = Scalar(255,255,255);
-
-    for(uint i = 0; i < boundRect.size(); i++) {
-        Rect rect = boundRect[i];
-        if( showAllContoursForTest || isPotentialDigitOrDecimalPoint(rect, criteria)) {
-            Mat imageroi = colorResizedFiltered(rect);
-            imageroi.convertTo(imageroi, CV_32F);
-            Mat roi, sample;
-            resize(imageroi, roi, DIGIT_TEMPLATE_SIZE);
-            roi.reshape(1, 1).convertTo(sample, CV_32F);
-
-            // Classification
-            Mat results;
-            float result = kNearest->findNearest(sample, kNearest->getDefaultK(), results);
-            int val = (int)result;
-
-            string charValue = to_string(val);
-            if (val == 10) {
-                charValue = ".";
-            }
-
-            bool found = find(values.begin(), values.end(), charValue) != values.end();
-            if (found == true)
-            {
-                rectangle(drawing, rect.tl(), rect.br(), contourColor, 2, LINE_4, 0);
-                int textX = rect.br().x;
-                if (val != 10)  // Exception for "."
-                    textX -= DIGIT_TEMPLATE_SIZE.width / 2;
-                putText(drawing, charValue, Point(textX, referenceDigitFeatures.bottomY * imageScaleFactor + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, textColor, 3);
-
-                //                putText(drawing, charValue, Point(rect.br().x - DIGIT_TEMPLATE_SIZE.width / 2, referenceDigitFeatures.bottomY * imageScaleFactor + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, textColor, 3);
-                //final number
-                number += charValue;
-            }
-        }
-    }
-    //Show final number
-    QMessageBox msgBox;
-    msgBox.setText(QString::fromStdString(number));
-    msgBox.exec();
-
-    if (showImageFlags & SHOW_FEATURE_EXTRACTION_FLAG)
-    {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("Feature extract: enhancedImage", enhancedImage);
-        //        imageAnalizer.showImage("Feature extract: edges dilated", dilatedEdges);
-        imageAnalizer.showImage("Feature extract: enhancedResizedInverted", enhancedResizedInverted);
-        imageAnalizer.showImage("Feature extract: dilatedEnhancedInverted", dilatedEnhancedInverted);
-        imageAnalizer.showImage("Feature extract: colorResized", colorResized);
-        imageAnalizer.showImage("Feature extract: colorResizedFiltered", colorResizedFiltered);
-        imageAnalizer.showImage("Feature extract: contoursRoi", contoursRoi);
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("Feature extract: markedDigits", markedDigits);
-    }
-
-    //TODO
-    SevenSegmentDigitFeatures * result = new SevenSegmentDigitFeatures(0, 0, 0, 0);
 
     return result;
 }
@@ -314,7 +232,6 @@ void SevenSegmentGaugeReader::initialize() {
 }
 
 //TODO: Save/load training data: knn->save("my.yml") and knn->load("my.yml")
-//Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
 bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     Mat samples;
     vector<int> responseLabels;
@@ -374,7 +291,7 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     kNearest->setDefaultK(1);
     kNearest->train(samples, ml::ROW_SAMPLE, responseLabels);
 
-    //TODO?
+    //TODO: load if available
     kNearest->save("kNearest.yml");
 
     if (showImageFlags & SHOW_KNN_TRAINING_FLAG) {
@@ -395,17 +312,111 @@ double SevenSegmentGaugeReader::median(vector<double> collection)
         return collection[size / 2];
 }
 
-ReaderResult SevenSegmentGaugeReader::Classify(SevenSegmentDigitFeatures *features)
+ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vector<SevenSegmentDigitFeatures> digitFeatures, Mat colorResized, Mat colorResizedFiltered, SevenSegmentDigitCriteria criteria)
 {
-    return ReaderResult();
+    string resultText;
+    colorResized.copyTo(markedDigits);
+    Mat drawing(markedDigits);
+
+    vector<string> validChars { ".", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
+    Scalar contourColor = Scalar(0,255,0);
+    Scalar textColor = Scalar(255,255,255);
+
+    double resultValue = 0.0;
+    double decimalFactor = 1;
+
+    for(uint i = 0; i < digitFeatures.size(); i++) {
+        SevenSegmentDigitFeatures currentDigitFeatures = digitFeatures[i];
+        Rect rect = currentDigitFeatures.boundRect;
+        if( showAllContoursForTest || isPotentialDigitOrDecimalPoint(rect, criteria)) {
+            Mat digitRoi = colorResizedFiltered(rect);
+            digitRoi.convertTo(digitRoi, CV_32F);
+            Mat roi, sample;
+            resize(digitRoi, roi, DIGIT_TEMPLATE_SIZE);
+            roi.reshape(1, 1).convertTo(sample, CV_32F);
+
+            // Classification
+            Mat results;
+            int val = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), results);
+            String cValue = to_string(val);
+            if (val == 10) {
+                decimalFactor /= 10;
+                cValue = '.';
+            }
+
+            bool isValidChar = find(validChars.begin(), validChars.end(), cValue) != validChars.end();
+            if (isValidChar == true)
+            {
+                rectangle(drawing, rect.tl(), rect.br(), contourColor, 2, LINE_4, 0);
+                int textX = rect.br().x;
+                if (val != 10)  // Exception for '.'
+                {
+                    if(decimalFactor == 1)
+                    {
+                        resultValue *= 10;
+                        resultValue += val;
+                    }
+                    else
+                    {
+                        resultValue += val * decimalFactor;
+                        decimalFactor /= 10;
+                    }
+
+                    textX -= DIGIT_TEMPLATE_SIZE.width / 2;
+                }
+                putText(drawing, cValue, Point(textX, criteria.maxDigitBottomY + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, textColor, 3);
+                resultText += cValue;
+            }
+        }
+    }
+
+    ReaderResult result = ReaderResult();
+    result.value = resultValue;
+    result.unit = MeasureUnit();
+    result.unit.factor = 1;
+    result.unit.symbol = "kg";
+
+    qDebug() << "Result value:" << result.value << "kg";// << result.unit.symbol;
+
+    QMessageBox msgBox;
+    if (resultText.length() == 0)
+        resultText = "No digits recognized.";
+
+    msgBox.setText(QString::fromStdString(resultText));
+    msgBox.exec();
+
+    if (showImageFlags & SHOW_CLASSIFICATION_FLAG)
+    {
+        imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("classifyByKnn: colorResized", colorResized);
+        imageAnalizer.showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered);
+        imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("classifyByKnn: markedDigits", markedDigits);
+    }
+    return result;
 }
 
 ReaderResult SevenSegmentGaugeReader::ReadGaugeImage(Mat src)
 {
-    Mat enhanced, segmented, srcScaled;
+    Mat enhanced, segmented, srcScaled, colorResized, colorResizedFiltered;
+
+    vector<SevenSegmentDigitFeatures> digitFeatures;
     EnhanceImage(src, enhanced, srcScaled);
     SegmentImage(enhanced, segmented);
-    return Classify(ExtractFeatures(segmented, enhanced, srcScaled));
+    digitFeatures = ExtractFeatures(segmented, enhanced, srcScaled, colorResized, colorResizedFiltered);
+
+    // Option 1: K-nearest
+    return classifyDigitsByKNearestNeighborhood(digitFeatures, colorResized, colorResizedFiltered, digitCriteria);
+    // Option 2: Match segment features
+    // return classifyDigitsBySegmentPositions(dilatedEnhancedInverted, contours);
+    // Option 3: Template matching
+    // return classifyDigitsByTemplateMatching(enhancedImage, referenceDigitFeatures);
+}
+
+Mat SevenSegmentGaugeReader::getMarkedImage()
+{
+    return markedDigits;
 }
 
 Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName, int flags)
@@ -422,10 +433,8 @@ Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName, int flags)
     return dst;
 }
 
-Mat SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours){
-    Mat markedDigits;
+ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours){
     src.copyTo(markedDigits);
-
     Mat drawing(markedDigits);
 
     //Mask derived from https://www.pyimagesearch.com/2017/02/13/recognizing-digits-with-opencv-and-python/
@@ -503,7 +512,6 @@ Mat SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, vector<ve
                 {
                     cerr << e.msg << endl; // output exception message
                 }
-
                 i1++;
             }
 
@@ -528,9 +536,11 @@ Mat SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, vector<ve
         msgBox.setText(QString::fromStdString("digits are " + digits));
         msgBox.exec();
     }*/
+
     imshow("classifyDigitsBySegmentPositions: markedDigits", markedDigits);
 
-    return markedDigits;
+    //TODO
+    return ReaderResult();
 }
 
 vector<Point2d> SevenSegmentGaugeReader::getPoint(Point2d p1 , Point2d p2) {

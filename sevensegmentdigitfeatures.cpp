@@ -9,3 +9,9 @@ SevenSegmentDigitFeatures::SevenSegmentDigitFeatures(int width, int height, int 
     this->value = value;
     this->imageScale = imageScale;
 }
+
+SevenSegmentDigitFeatures::SevenSegmentDigitFeatures(cv::Rect boundRect)
+{
+    this->boundRect = boundRect;
+    //TODO: other features/ default values
+}

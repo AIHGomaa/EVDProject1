@@ -10,8 +10,8 @@ using namespace cv;
 class SevenSegmentDigitCriteria
 {
 private:
-    SevenSegmentDigitCriteria();
 public:
+    SevenSegmentDigitCriteria();
     static SevenSegmentDigitCriteria create(SevenSegmentDigitFeatures referenceDigitFeatures, Size digitTemplateSize, double imageScaleFactor);
 
     //TODO: configurable in ui

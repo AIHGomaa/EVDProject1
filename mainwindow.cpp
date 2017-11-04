@@ -54,33 +54,48 @@ void MainWindow::configGaugeReader()
 
     gr->templateMatchThreshold = ui->spnTemplateMatchThreshold->value();
 
+    gr->showImageFlags = gr->SHOW_NONE;
+    if (ui->chkShowMainImages->checkState())
+        gr->showImageFlags |= gr->SHOW_MAIN_RESULTS_FLAG;
+    if (ui->chkShowEnhancementImages->checkState())
+        gr->showImageFlags |= gr->SHOW_IMAGE_ENHANCEMENT_FLAG;
+    if (ui->chkShowSegmentationImages->checkState())
+        gr->showImageFlags |= gr->SHOW_SEGMENTATION_FLAG;
+    if (ui->chkShowFeatureExtractionImages->checkState())
+        gr->showImageFlags |= gr->SHOW_FEATURE_EXTRACTION_FLAG;
+    if (ui->chkShowFeatureExtractReferenceDigitImages->checkState())
+        gr->showImageFlags |= gr->SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG;
+    if (ui->chkShowFeatureExtractKnnTraining->checkState())
+        gr->showImageFlags |= gr->SHOW_KNN_TRAINING_FLAG;
+    if (ui->chkShowClassificationImages->checkState())
+        gr->showImageFlags |= gr->SHOW_CLASSIFICATION_FLAG;
+
     gr->initialize();
 }
 
 void MainWindow::processImage()
 {
+    destroyAllWindows();
+
     if(!srcImage.data) {
         return;
     }
-
-    Mat enhanced, segmented, srcScaled;
-
-    configGaugeReader();
-
-    gaugeReader->EnhanceImage(srcImage, enhanced, srcScaled);
-    gaugeReader->SegmentImage(enhanced, segmented);
-    gaugeReader->ExtractFeatures(segmented, enhanced, srcScaled);
 
     if (ui->chkShowMainImages->checkState())
     {
         imageAnalizer.resetNextWindowPosition();
         imageAnalizer.showImage("MainWindow: Original image", srcImage);
-        imageAnalizer.showImage("MainWindow srcScaled", srcScaled);
-        imageAnalizer.showImage("MainWindow: Enhanced image", enhanced);
-        //        imageAnalizer.showImage("MainWindow: Enhanced after feature extract", enhancedAfterFeatureExtract);
-        imageAnalizer.showImage("MainWindow: Segmented image", segmented);
-        //        imageAnalizer.showImage("MainWindow: Segmented image", dst);
     }
+
+    configGaugeReader();
+    gaugeReader->ReadGaugeImage(srcImage);
+
+        qDebug() << "after return ReadGaugeImage";
+
+//    if (ui->chkShowMainImages->checkState())
+//    {
+//        imageAnalizer.showImage("MainWindow: Marked digits", gaugeReader->getMarkedImage());
+//    }
 }
 
 void MainWindow::on_btnReadImageValue_clicked()
@@ -246,3 +261,38 @@ void MainWindow::on_spnTemplateMatchThreshold_valueChanged()
     processImage();
 }
 
+
+void MainWindow::on_chkShowMainImages_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_chkShowEnhancementImages_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_chkShowSegmentationImages_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_chkShowFeatureExtractionImages_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_chkShowFeatureExtractReferenceDigitImages_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_chkShowClassificationImages_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_chkShowFeatureExtractKnnTraining_clicked()
+{
+    processImage();
+}
