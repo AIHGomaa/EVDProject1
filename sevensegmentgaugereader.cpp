@@ -1,5 +1,6 @@
 #include "sevensegmentgaugereader.h"
 #include "mainwindow.h"
+#include "imagetools.h"
 #include "QMessageBox"
 #include "QDebug"
 
@@ -28,7 +29,7 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
     // Test result: best option. Significantly better contrast on bright images. Less effect on dark images with bright segments.
     // Gamma 0.25 is too dark, 0.5 is better.
     Mat gammaCorrectedGrayScaled;
-    Mat gammaCorrected = correctGamma(src, 0.5);
+    Mat gammaCorrected = ImageTools::correctGamma(src, 0.5);
     cvtColor(gammaCorrected, gammaCorrectedGrayScaled, COLOR_BGR2GRAY);
 
     // Option 3:
@@ -88,7 +89,7 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray
 
     if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG) {
         imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("EnhanceImage: srcScaled", srcScaled);
+        imageAnalizer.showImage("EnhanceImage: srcScaled", srcScaled.getMat());
         imageAnalizer.showImage("EnhanceImage: contrastEnhanced", contrastEnhanced);
         imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
         imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
@@ -138,7 +139,7 @@ double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
         angles.push_back (angleRad);
     }
 
-    double medianAngleRad = median(angles);
+    double medianAngleRad = ImageTools::median(angles);
     double medianAngleDegr = medianAngleRad * 180.0 / CV_PI;
 
     std::cout << "mean angle: " << medianAngleRad << "rad, " << medianAngleDegr << "degr" << std::endl;
@@ -199,13 +200,6 @@ bool SevenSegmentGaugeReader::isPotentialDigitOrDecimalPoint(Rect rect, SevenSeg
               rect.width >= criteria.minDecimalPointSize.width && rect.width <= criteria.maxDecimalPointSize.width));
 }
 
-bool SevenSegmentGaugeReader::contourLeftToRightComparer(const vector<Point> a, const vector<Point> b)
-{
-    Rect ra(boundingRect(a));
-    Rect rb(boundingRect(b));
-    return (ra.x < rb.x);
-}
-
 vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage, OutputArray colorResized, OutputArray colorResizedFiltered)
 {
     double rotationDegrees = calculateRotationDegrees(edges);
@@ -258,7 +252,7 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
 
     qDebug() << "contours.size() " << contours.size();
     
-    sort(contours.begin(), contours.end(), contourLeftToRightComparer);
+    sort(contours.begin(), contours.end(), ImageTools::contourLeftToRightComparer);
     
     vector<vector<Point>> contoursPoly( contours.size() );
     vector<SevenSegmentDigitFeatures> result;
@@ -357,33 +351,6 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
         imageAnalizer.showImage("KNN training samples", samples);
     }
     return true;
-}
-
-// Derived from https://stackoverflow.com/questions/2114797/compute-median-of-values-stored-in-vector-c
-double SevenSegmentGaugeReader::median(vector<double> collection)
-{
-    size_t size = collection.size();
-    sort(collection.begin(), collection.end());
-    if (size  % 2 == 0)
-        return (collection[size / 2 - 1] + collection[size / 2]) / 2;
-    else
-        return collection[size / 2];
-}
-
-// From https://subokita.com/2013/06/18/simple-and-fast-gamma-correction-on-opencv/
-Mat SevenSegmentGaugeReader::correctGamma(Mat& img, double gamma)
-{
-    double inverse_gamma = 1.0 / gamma;
-
-    Mat lut_matrix(1, 256, CV_8UC1 );
-    uchar * ptr = lut_matrix.ptr();
-    for( int i = 0; i < 256; i++ )
-        ptr[i] = (int)(pow((double) i / 255.0, inverse_gamma) * 255.0);
-
-    Mat result;
-    LUT(img, lut_matrix, result);
-
-    return result;
 }
 
 ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vector<SevenSegmentDigitFeatures> digitFeatures, Mat colorResized, Mat colorResizedFiltered, SevenSegmentDigitCriteria criteria)

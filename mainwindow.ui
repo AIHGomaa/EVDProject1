@@ -17,7 +17,7 @@
    <widget class="QPushButton" name="btnReadImageValue">
     <property name="geometry">
      <rect>
-      <x>310</x>
+      <x>320</x>
       <y>30</y>
       <width>111</width>
       <height>23</height>
@@ -49,7 +49,7 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>110</x>
       <y>120</y>
       <width>81</width>
       <height>16</height>
@@ -136,7 +136,7 @@
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>110</x>
       <y>180</y>
       <width>81</width>
       <height>16</height>
@@ -149,7 +149,7 @@
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>110</x>
       <y>240</y>
       <width>111</width>
       <height>16</height>
@@ -162,7 +162,7 @@
    <widget class="QLabel" name="label_7">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>110</x>
       <y>350</y>
       <width>111</width>
       <height>16</height>
@@ -475,7 +475,7 @@
    <widget class="QComboBox" name="cmbTestImages">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>110</x>
       <y>30</y>
       <width>191</width>
       <height>22</height>
@@ -577,7 +577,7 @@
    <widget class="QPushButton" name="btnReadCameraImage">
     <property name="geometry">
      <rect>
-      <x>440</x>
+      <x>450</x>
       <y>30</y>
       <width>111</width>
       <height>23</height>
@@ -590,7 +590,7 @@
    <widget class="QCheckBox" name="chkShowMainImages">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>40</x>
       <y>30</y>
       <width>16</width>
       <height>20</height>
@@ -616,7 +616,7 @@
    <widget class="QCheckBox" name="chkShowEnhancementImages">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>40</x>
       <y>120</y>
       <width>16</width>
       <height>20</height>
@@ -629,7 +629,7 @@
    <widget class="QCheckBox" name="chkShowSegmentationImages">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>40</x>
       <y>180</y>
       <width>16</width>
       <height>20</height>
@@ -642,7 +642,7 @@
    <widget class="QCheckBox" name="chkShowClassificationImages">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>40</x>
       <y>350</y>
       <width>16</width>
       <height>20</height>
@@ -655,7 +655,7 @@
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
-      <x>70</x>
+      <x>90</x>
       <y>10</y>
       <width>20</width>
       <height>411</height>
@@ -681,7 +681,7 @@
    <widget class="QCheckBox" name="chkShowFeatureExtractionImages">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>40</x>
       <y>240</y>
       <width>16</width>
       <height>20</height>
@@ -694,7 +694,7 @@
    <widget class="QCheckBox" name="chkShowFeatureExtractReferenceDigitImages">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>70</x>
       <y>280</y>
       <width>16</width>
       <height>20</height>
@@ -707,7 +707,7 @@
    <widget class="QCheckBox" name="chkShowFeatureExtractKnnTraining">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>70</x>
       <y>300</y>
       <width>16</width>
       <height>20</height>
@@ -720,7 +720,7 @@
    <widget class="QCheckBox" name="chkShowFeatureExtractRotationCorrection">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>70</x>
       <y>260</y>
       <width>16</width>
       <height>20</height>
@@ -821,6 +821,45 @@
       <weight>75</weight>
       <bold>true</bold>
      </font>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_11">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>260</y>
+      <width>41</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>rotation</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_21">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>280</y>
+      <width>41</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>scale</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_22">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>300</y>
+      <width>41</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>knn train</string>
     </property>
    </widget>
   </widget>

@@ -32,7 +32,8 @@ SOURCES += \
     imageanalizer.cpp \
     sevensegmentdigitcriteria.cpp \
     sevensegmentdigitfeatures.cpp \
-    templatematchfeatures.cpp
+    templatematchfeatures.cpp \
+    imagetools.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -43,7 +44,8 @@ HEADERS += \
     imageanalizer.h \
     sevensegmentdigitcriteria.h \
     sevensegmentdigitfeatures.h \
-    templatematchfeatures.h
+    templatematchfeatures.h \
+    imagetools.h
 
 FORMS += \
         mainwindow.ui

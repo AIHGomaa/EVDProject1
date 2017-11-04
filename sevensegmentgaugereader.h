@@ -89,14 +89,14 @@ private:
     bool loadKNNDataAndTrainKNN();
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
-    double median(vector<double> collection);
+//    double median(vector<double> collection);
     bool isPotentialDigitOrDecimalPoint(Rect rect, SevenSegmentDigitCriteria digitCriteria);
-    static bool contourLeftToRightComparer(const vector<Point> a, const vector<Point> b);
+//    static bool contourLeftToRightComparer(const vector<Point> a, const vector<Point> b);
     ReaderResult classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours);
     ReaderResult classifyDigitsByKNearestNeighborhood(vector<SevenSegmentDigitFeatures> digitFeatures, Mat colorResized, Mat colorResizedFiltered, SevenSegmentDigitCriteria digitCriteria);
     //    ReaderResult classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures);
     void enhanceContrast(Mat src, Mat dst);
-    Mat correctGamma(Mat &img, double gamma);
+//    Mat correctGamma(Mat &img, double gamma);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H
