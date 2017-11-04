@@ -95,6 +95,8 @@ private:
     ReaderResult classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours);
     ReaderResult classifyDigitsByKNearestNeighborhood(vector<SevenSegmentDigitFeatures> digitFeatures, Mat colorResized, Mat colorResizedFiltered, SevenSegmentDigitCriteria digitCriteria);
     //    ReaderResult classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures);
+    void enhanceContrast(Mat src, Mat dst);
+    Mat correctGamma(Mat &img, double gamma);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H

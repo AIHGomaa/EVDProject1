@@ -8,35 +8,88 @@ SevenSegmentGaugeReader::SevenSegmentGaugeReader()
     imageAnalizer = ImageAnalizer();
 }
 
+void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
+{
+    // Option 1:
+    // Histogram equalization per channel.
+    // Test result: active segments get brighter,
+    // but in bright images, the contrast with inactive segments doesn't increase enough.
+    //    Mat planes[3];
+    //    split(src, planes);
+    //    equalizeHist(planes[0], planes[0]);
+    //    equalizeHist(planes[1], planes[1]);
+    //    equalizeHist(planes[2], planes[2]);
+    //    Mat histoEqualized, histoEqualizedGrayScaled;
+    //    merge(planes, 3, histoEqualized);
+    //    cvtColor(histoEqualized, histoEqualizedGrayScaled, COLOR_BGR2GRAY);
+
+    // Option 2:
+    // n-th root gamma correction
+    // Test result: best option. Significantly better contrast on bright images. Less effect on dark images with bright segments.
+    // Gamma 0.25 is too dark, 0.5 is better.
+    Mat gammaCorrectedGrayScaled;
+    Mat gammaCorrected = correctGamma(src, 0.5);
+    cvtColor(gammaCorrected, gammaCorrectedGrayScaled, COLOR_BGR2GRAY);
+
+    // Option 3:
+    // Take one of the HSV channels.
+    // Test result: Value channel has the best contrast (active digits have high value),
+    // but effect is slightly less than gamma correction.
+    //    Mat hsv;
+    //    cvtColor(src, hsv, COLOR_BGR2HSV);
+    //    Mat hsvPlanes[3];
+    //    split(hsv, hsvPlanes);
+
+    // TODO: try combinations of gamma correction, and V-layer.
+
+    // Option 4: Without contrast enhancement.
+    // Test result: works for dark images with bright segments. Not sufficient for bright images.
+    // (adaptive threshold doesn't separate active segments from inactive segments.
+    //    Mat grayScaled(src.rows, src.cols, CV_8UC1);
+    //    cvtColor(src, grayScaled, COLOR_RGB2GRAY);
+
+    gammaCorrectedGrayScaled.copyTo(dst);
+
+    if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG)
+    {
+        imageAnalizer.resetNextWindowPosition();
+        //    imageAnalizer.showImage("Contrast enhancement, histoEqualized", histoEqualized);
+        //    imageAnalizer.showImage("Contrast enhancement, histoEqualizedGrayScaled", histoEqualizedGrayScaled);  // heeft minder effect dan hsv en gamma correct
+        imageAnalizer.showImage("Contrast enhancement, gammaCorrected", gammaCorrected);
+//        imageAnalizer.showImage("Contrast enhancement, gammaCorrectedGrayScaled", gammaCorrectedGrayScaled);
+        //    imageAnalizer.showImage("Contrast enhancement, hsvPlanes[0]", hsvPlanes[0]);
+        //    imageAnalizer.showImage("Contrast enhancement, hsvPlanes[1]", hsvPlanes[1]);
+        //    imageAnalizer.showImage("Contrast enhancement, hsvPlanes[2]", hsvPlanes[2]);
+        //  imageAnalizer.showImage("Contrast enhancement, grayScaled", grayScaled);
+    }
+}
+
 void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled)
 {
-    Mat grayScaled(src.rows, src.cols, CV_8UC1);
-    Mat adaptThreshold(IMG_SIZE, CV_8UC1);
-    Mat blurred(IMG_SIZE, CV_8UC1);
-    
     // Fixed input resolution, to make kernel sizes independent of scale.
     resize(src, srcScaled, IMG_SIZE, 0, 0, INTER_LINEAR);
 
-    cvtColor(srcScaled, grayScaled, COLOR_RGB2GRAY);
-    imageAnalizer.resetNextWindowPosition();
-    
+    Mat contrastEnhanced(IMG_SIZE, CV_8UC1);
+    enhanceContrast(srcScaled.getMat(), contrastEnhanced);
+
+    Mat blurred(IMG_SIZE, CV_8UC1);
     // Blur is too strong on lowest resolution of Honeywell Dolphin. Maybe useful for higher resolutions
     //    blur(grayScaled, blurred, Size(gaussianBlurSize, gaussianBlurSize));
-    GaussianBlur(grayScaled, blurred, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);  // remove small noise
-    
-    // Canny without adaptiveThreshold gives better result.
+    GaussianBlur(contrastEnhanced, blurred, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);  // remove small noise
+
+    Mat adaptThreshold(IMG_SIZE, CV_8UC1);
     // THRESH_BINARY_INV: Display segments are lighted. We need black segments.
-    adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
-    
+        adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
+    //    adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
+
     //GaussianBlur(adaptThreshold, dst, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);
-    
+
     adaptThreshold.copyTo(dst);
-    
+
     if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG) {
         imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("EnhanceImage: src", src);
-        imageAnalizer.showImage("EnhanceImage: grayScaled", grayScaled);
-        imageAnalizer.showImage("EnhanceImage: blurred", blurred);
+        imageAnalizer.showImage("EnhanceImage: srcScaled", srcScaled);
+        imageAnalizer.showImage("EnhanceImage: contrastEnhanced", contrastEnhanced);
         imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
         imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
     }
@@ -223,6 +276,7 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     if (showImageFlags & SHOW_FEATURE_EXTRACTION_FLAG)
     {
         imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("classifyByKnn: contoursRoi", contoursRoi);
         imageAnalizer.showImage("classifyByKnn: colorResized", colorResized.getMat());
         imageAnalizer.showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
     }
@@ -314,6 +368,22 @@ double SevenSegmentGaugeReader::median(vector<double> collection)
         return (collection[size / 2 - 1] + collection[size / 2]) / 2;
     else
         return collection[size / 2];
+}
+
+// From https://subokita.com/2013/06/18/simple-and-fast-gamma-correction-on-opencv/
+Mat SevenSegmentGaugeReader::correctGamma(Mat& img, double gamma)
+{
+    double inverse_gamma = 1.0 / gamma;
+
+    Mat lut_matrix(1, 256, CV_8UC1 );
+    uchar * ptr = lut_matrix.ptr();
+    for( int i = 0; i < 256; i++ )
+        ptr[i] = (int)(pow((double) i / 255.0, inverse_gamma) * 255.0);
+
+    Mat result;
+    LUT(img, lut_matrix, result);
+
+    return result;
 }
 
 ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vector<SevenSegmentDigitFeatures> digitFeatures, Mat colorResized, Mat colorResizedFiltered, SevenSegmentDigitCriteria criteria)
@@ -416,7 +486,7 @@ Mat SevenSegmentGaugeReader::getMarkedImage()
     if (markedDigits.rows == 0 || markedDigits.cols == 0)
         result = srcImage.clone();
     else
-         result = markedDigits.clone();
+        result = markedDigits.clone();
 
     cv::resize(result, result, Size(300, 400));
     return result;
