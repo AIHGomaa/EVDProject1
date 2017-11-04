@@ -14,6 +14,7 @@ class IGaugeReader
 public:
     IGaugeReader() {}
     virtual ReaderResult ReadGaugeImage(Mat src) = 0;
+    virtual Mat getSourceImage() = 0;
     virtual Mat getMarkedImage() = 0;
 };
 

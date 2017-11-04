@@ -13,7 +13,6 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray
     Mat grayScaled(src.rows, src.cols, CV_8UC1);
     Mat adaptThreshold(IMG_SIZE, CV_8UC1);
     Mat blurred(IMG_SIZE, CV_8UC1);
-    //    Mat filteredGaussian(IMG_SIZE, CV_8UC1);
     
     // Fixed input resolution, to make kernel sizes independent of scale.
     resize(src, srcScaled, IMG_SIZE, 0, 0, INTER_LINEAR);
@@ -209,7 +208,6 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     sort(contours.begin(), contours.end(), contourLeftToRightComparer);
     
     vector<vector<Point>> contoursPoly( contours.size() );
-    //    vector<SevenSegmentDigitFeatures> result( contours.size() );
     vector<SevenSegmentDigitFeatures> result;
 
     // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
@@ -222,6 +220,12 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     // Filter color image by binary image.
     colorResized.copyTo(colorResizedFiltered, enhancedResizedInverted);
 
+    if (showImageFlags & SHOW_FEATURE_EXTRACTION_FLAG)
+    {
+        imageAnalizer.resetNextWindowPosition();
+        imageAnalizer.showImage("classifyByKnn: colorResized", colorResized.getMat());
+        imageAnalizer.showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
+    }
     return result;
 }
 
@@ -325,6 +329,8 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
 
     double resultValue = 0.0;
     double decimalFactor = 1;
+    int precision = 0;
+    bool digitRecognized = false;
 
     for(uint i = 0; i < digitFeatures.size(); i++) {
         SevenSegmentDigitFeatures currentDigitFeatures = digitFeatures[i];
@@ -336,11 +342,10 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
             resize(digitRoi, roi, DIGIT_TEMPLATE_SIZE);
             roi.reshape(1, 1).convertTo(sample, CV_32F);
 
-            // Classification
-            Mat results;
-            int val = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), results);
-            String cValue = to_string(val);
-            if (val == 10) {
+            Mat knnResult;
+            int responseValue = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), knnResult);
+            String cValue = to_string(responseValue);
+            if (responseValue == 10) {
                 decimalFactor /= 10;
                 cValue = '.';
             }
@@ -350,16 +355,18 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
             {
                 rectangle(drawing, rect.tl(), rect.br(), contourColor, 2, LINE_4, 0);
                 int textX = rect.br().x;
-                if (val != 10)  // Exception for '.'
+                if (responseValue != 10)  // Exception for decimal point
                 {
+                    digitRecognized = true;
                     if(decimalFactor == 1)
                     {
                         resultValue *= 10;
-                        resultValue += val;
+                        resultValue += responseValue;
                     }
                     else
                     {
-                        resultValue += val * decimalFactor;
+                        resultValue += responseValue * decimalFactor;
+                        precision++;
                         decimalFactor /= 10;
                     }
 
@@ -370,29 +377,17 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
             }
         }
     }
+    ReaderResult result = ReaderResult(resultValue, precision, MeasureUnit(1, "kg"), digitRecognized);
 
-    ReaderResult result = ReaderResult();
-    result.value = resultValue;
-    result.unit = MeasureUnit();
-    result.unit.factor = 1;
-    result.unit.symbol = "kg";
-
-    qDebug() << "Result value:" << result.value << "kg";// << result.unit.symbol;
-
-    QMessageBox msgBox;
-    if (resultText.length() == 0)
-        resultText = "No digits recognized.";
-
-    msgBox.setText(QString::fromStdString(resultText));
-    msgBox.exec();
+    if (digitRecognized)
+        qDebug() << "Result value:" << result.value << "kg";
+    else
+        qDebug() << "ClassifyByKnn: No digits recognized.";
 
     if (showImageFlags & SHOW_CLASSIFICATION_FLAG)
     {
         imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("classifyByKnn: colorResized", colorResized);
-        imageAnalizer.showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered);
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("classifyByKnn: markedDigits", markedDigits);
+        imageAnalizer.showImage("classifyByKnn: markedDigits", getMarkedImage());
     }
     return result;
 }
@@ -403,9 +398,10 @@ ReaderResult SevenSegmentGaugeReader::ReadGaugeImage(Mat src)
 
     vector<SevenSegmentDigitFeatures> digitFeatures;
     EnhanceImage(src, enhanced, srcScaled);
+    srcScaled.copyTo(srcImage);
+
     SegmentImage(enhanced, segmented);
     digitFeatures = ExtractFeatures(segmented, enhanced, srcScaled, colorResized, colorResizedFiltered);
-
     // Option 1: K-nearest
     return classifyDigitsByKNearestNeighborhood(digitFeatures, colorResized, colorResizedFiltered, digitCriteria);
     // Option 2: Match segment features
@@ -416,7 +412,21 @@ ReaderResult SevenSegmentGaugeReader::ReadGaugeImage(Mat src)
 
 Mat SevenSegmentGaugeReader::getMarkedImage()
 {
-    return markedDigits;
+    Mat result;
+    if (markedDigits.rows == 0 || markedDigits.cols == 0)
+        result = srcImage.clone();
+    else
+         result = markedDigits.clone();
+
+    cv::resize(result, result, Size(300, 400));
+    return result;
+}
+
+Mat SevenSegmentGaugeReader::getSourceImage()
+{
+    Mat result = srcImage.clone();
+    cv::resize(result, result, Size(300, 400));
+    return result;
 }
 
 Mat SevenSegmentGaugeReader::loadReferenceImage(string fileName, int flags)
@@ -539,8 +549,8 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, 
 
     imshow("classifyDigitsBySegmentPositions: markedDigits", markedDigits);
 
-    //TODO
-    return ReaderResult();
+    //TODO: calculate result value
+    return ReaderResult(0, 0, MeasureUnit(1, "kg"), true);
 }
 
 vector<Point2d> SevenSegmentGaugeReader::getPoint(Point2d p1 , Point2d p2) {

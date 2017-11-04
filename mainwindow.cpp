@@ -4,6 +4,8 @@
 #include "QDebug"
 #include "QMessageBox"
 #include "sevensegmentgaugereader.h"
+#include <iomanip> // setprecision
+#include <sstream> // stringstream
 
 using namespace cv;
 
@@ -63,6 +65,8 @@ void MainWindow::configGaugeReader()
         gr->showImageFlags |= gr->SHOW_SEGMENTATION_FLAG;
     if (ui->chkShowFeatureExtractionImages->checkState())
         gr->showImageFlags |= gr->SHOW_FEATURE_EXTRACTION_FLAG;
+    if (ui->chkShowFeatureExtractRotationCorrection->checkState())
+        gr->showImageFlags |= gr->SHOW_ROTATION_CORRECTION_FLAG;
     if (ui->chkShowFeatureExtractReferenceDigitImages->checkState())
         gr->showImageFlags |= gr->SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG;
     if (ui->chkShowFeatureExtractKnnTraining->checkState())
@@ -75,31 +79,38 @@ void MainWindow::configGaugeReader()
 
 void MainWindow::processImage()
 {
-    destroyAllWindows();
+    ui->txtReaderResult->clear();
 
     if(!srcImage.data) {
         return;
     }
 
+    configGaugeReader();
+    ReaderResult result = gaugeReader->ReadGaugeImage(srcImage);
+
     if (ui->chkShowMainImages->checkState())
     {
         imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("MainWindow: Original image", srcImage);
+        imageAnalizer.showImage("MainWindow: Original image", gaugeReader->getSourceImage());
+        imageAnalizer.showImage("MainWindow: Marked digits", gaugeReader->getMarkedImage());
     }
 
-    configGaugeReader();
-    gaugeReader->ReadGaugeImage(srcImage);
-
-        qDebug() << "after return ReadGaugeImage";
-
-//    if (ui->chkShowMainImages->checkState())
-//    {
-//        imageAnalizer.showImage("MainWindow: Marked digits", gaugeReader->getMarkedImage());
-//    }
+    if (result.successful)
+    {
+        stringstream stream;
+        stream << fixed << setprecision(result.precision) << result.value;
+        string s = stream.str();
+        qDebug() << "MainWindow, result:" << QString::fromStdString(s);
+        ui->txtReaderResult->setText(QString::fromStdString(s));
+    }
+    else
+        ui->txtReaderResult->setText("----");
 }
 
 void MainWindow::on_btnReadImageValue_clicked()
 {
+    destroyAllWindows();
+
     auto childList = findChildren<QMainWindow*>();
     for (auto child : childList)
     {
@@ -131,6 +142,8 @@ void MainWindow::on_btnReadCameraImage_clicked()
     VideoCapture vc;
     Mat rawCameraInput(400, 300, CV_8SC4);
     Mat cameraImage(400, 300, CV_8SC4), blurredTopRange, blurredBottomRange;
+
+    destroyAllWindows();
 
     imageAnalizer.showImage("Camera input", cameraImage, 0, 0);
 
@@ -261,38 +274,50 @@ void MainWindow::on_spnTemplateMatchThreshold_valueChanged()
     processImage();
 }
 
-
 void MainWindow::on_chkShowMainImages_clicked()
 {
+    destroyAllWindows();
     processImage();
 }
 
 void MainWindow::on_chkShowEnhancementImages_clicked()
 {
+    destroyAllWindows();
     processImage();
 }
 
 void MainWindow::on_chkShowSegmentationImages_clicked()
 {
+    destroyAllWindows();
     processImage();
 }
 
 void MainWindow::on_chkShowFeatureExtractionImages_clicked()
 {
+    destroyAllWindows();
     processImage();
 }
 
 void MainWindow::on_chkShowFeatureExtractReferenceDigitImages_clicked()
 {
+    destroyAllWindows();
     processImage();
 }
 
 void MainWindow::on_chkShowClassificationImages_clicked()
 {
+    destroyAllWindows();
     processImage();
 }
 
 void MainWindow::on_chkShowFeatureExtractKnnTraining_clicked()
 {
+    destroyAllWindows();
+    processImage();
+}
+
+void MainWindow::on_chkShowFeatureExtractRotationCorrection_clicked()
+{
+    destroyAllWindows();
     processImage();
 }

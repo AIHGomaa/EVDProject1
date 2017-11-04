@@ -67,6 +67,7 @@ public:
     void initialize();
     ReaderResult ReadGaugeImage(Mat src);
     Mat getMarkedImage();
+    Mat getSourceImage();
 private:
     const int X_RESOLUTION = 480;
     const int Y_RESOLUTION = 640;
@@ -75,7 +76,7 @@ private:
     const int DIGIT_TEMPLATE_Y_RESOLUTION = 80;
     const Size DIGIT_TEMPLATE_SIZE = Size(DIGIT_TEMPLATE_X_RESOLUTION, DIGIT_TEMPLATE_Y_RESOLUTION);
     SevenSegmentDigitCriteria digitCriteria;
-    Mat markedDigits;
+    Mat srcImage, markedDigits;
 
     Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
     void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled);

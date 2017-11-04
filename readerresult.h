@@ -8,8 +8,11 @@ class ReaderResult
 {
 public:
     ReaderResult();
+    ReaderResult(float value, int precision, MeasureUnit unit, bool succesfull);
     float value;
     MeasureUnit unit;
+    bool successful = false;
+    int precision;
 };
 
 #endif // READERRESULT_H

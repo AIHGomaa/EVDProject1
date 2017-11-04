@@ -7,6 +7,7 @@ class MeasureUnit
 {
 public:
     MeasureUnit();
+    MeasureUnit(float factor, std::string symbol);
     float factor;
     std::string symbol;
 };

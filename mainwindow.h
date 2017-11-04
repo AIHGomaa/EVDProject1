@@ -73,6 +73,8 @@ private slots:
 
     void on_chkShowFeatureExtractKnnTraining_clicked();
 
+    void on_chkShowFeatureExtractRotationCorrection_clicked();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory
