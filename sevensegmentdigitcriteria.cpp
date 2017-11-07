@@ -10,7 +10,7 @@ SevenSegmentDigitCriteria SevenSegmentDigitCriteria::create(SevenSegmentDigitFea
 {
     SevenSegmentDigitCriteria result = SevenSegmentDigitCriteria();
 
-    result.minDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 - digitYTolerance * 1.5) + 0.5;
+    result.minDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 - digitYTolerance * 1.8) + 0.5;
     result.maxDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 + digitYTolerance) + 0.5;
     // Digits 0 and 2..6 and 8..9
     result.minDigitSize = Size(digitTemplateSize.width *  (1 - digitWTolerance * 2) + 0.5, digitTemplateSize.height * (1 - digitHTolerance * 1.5) + 0.5);
