@@ -128,7 +128,7 @@ void MainWindow::on_btnReadImageValue_clicked()
     }
 
     // Simulate camera image roi
-    int blurredRowHeight = (int)(srcImage.rows / 3.5 + 0.5);
+    int blurredRowHeight = (int)(srcImage.rows / 3.6 + 0.5);
     Mat blurredTopRange = srcImage(Range(0, blurredRowHeight), Range::all());
     Mat blurredBottomRange = srcImage(Range(srcImage.rows - blurredRowHeight, srcImage.rows-1), Range::all());
     blur(blurredTopRange, blurredTopRange, Size(25, 25), Point(-1, -1), BORDER_DEFAULT);

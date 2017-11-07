@@ -498,7 +498,7 @@
      <number>2</number>
     </property>
     <property name="value">
-     <number>1</number>
+     <number>3</number>
     </property>
    </widget>
    <widget class="QSpinBox" name="spnDigitDilateKernelHeight">
@@ -517,7 +517,7 @@
      <number>2</number>
     </property>
     <property name="value">
-     <number>9</number>
+     <number>13</number>
     </property>
    </widget>
    <widget class="QLabel" name="label_19">

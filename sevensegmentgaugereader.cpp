@@ -56,7 +56,7 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
         //    ImageTools::showImage("Contrast enhancement, histoEqualized", histoEqualized);
         //    ImageTools::showImage("Contrast enhancement, histoEqualizedGrayScaled", histoEqualizedGrayScaled);  // heeft minder effect dan hsv en gamma correct
         ImageTools::showImage("Contrast enhancement, gammaCorrected", gammaCorrected);
-//        ImageTools::showImage("Contrast enhancement, gammaCorrectedGrayScaled", gammaCorrectedGrayScaled);
+        //        ImageTools::showImage("Contrast enhancement, gammaCorrectedGrayScaled", gammaCorrectedGrayScaled);
         //    ImageTools::showImage("Contrast enhancement, hsvPlanes[0]", hsvPlanes[0]);
         //    ImageTools::showImage("Contrast enhancement, hsvPlanes[1]", hsvPlanes[1]);
         //    ImageTools::showImage("Contrast enhancement, hsvPlanes[2]", hsvPlanes[2]);
@@ -79,7 +79,7 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray
 
     Mat adaptThreshold(IMG_SIZE, CV_8UC1);
     // THRESH_BINARY_INV: Display segments are lighted. We need black segments.
-        adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
+    adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
     //    adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
 
     //GaussianBlur(adaptThreshold, dst, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);
@@ -237,13 +237,17 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
 
     qDebug() << "imageScaleFactor" << imageScaleFactor << "enhancedImage.rows" << enhancedImage.rows << "enhancedResized.rows" << enhancedResized.rows;
 
-    // Use kernel height > kernel width,
-    // to remove gaps between segments for findContours() but keep decimal point separated from nearest digit.
+    // Remove gaps between segments for findContours() but keep decimal point separated from nearest digit.
+    // Firtst use kernel height > kernel width and erode back with the same size.
     Mat dilateKernel = getStructuringElement(MORPH_RECT, Size(digitDilateKernelWidth, digitDilateKernelHeight));
     Mat enhancedResizedInverted;
     bitwise_not(enhancedResized, enhancedResizedInverted);
     Mat dilatedEnhancedInverted;
     dilate(enhancedResizedInverted, dilatedEnhancedInverted, dilateKernel);
+    erode(dilatedEnhancedInverted, dilatedEnhancedInverted, dilateKernel);
+    // Additionally, enlarge segments slightly to have larger decimal point. Necessary for IM_HD_30.
+    dilateKernel = getStructuringElement(MORPH_RECT, Size(3, 3));
+    dilate(dilatedEnhancedInverted, dilatedEnhancedInverted, dilateKernel);
 
     // Derived from https://docs.opencv.org/trunk/d6/d6e/group__imgproc__draw.html#ga746c0625f1781f1ffc9056259103edbc
     vector<vector<Point>> contours;
@@ -251,7 +255,14 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
 
     int roiHeight = digitCriteria.maxDigit1Size.height + (digitCriteria.maxDigitBottomY - digitCriteria.minDigitBottomY) * 2 + 0.5;
     Rect roiRect(0, digitCriteria.maxDigitBottomY + (digitCriteria.maxDigitBottomY - digitCriteria.minDigitBottomY) - roiHeight, dilatedEnhancedInverted.cols, roiHeight);
-//    Rect roiRect(0, digitCriteria.maxDigitBottomY - digitCriteria.maxDigit1Size.height, dilatedEnhancedInverted.cols, digitCriteria.maxDigit1Size.height);
+
+    if (roiRect.y + roiRect.height >= dilatedEnhancedInverted.rows || roiRect.y < 0)
+    {
+        // no matching digit found
+        vector<SevenSegmentDigitFeatures> result;
+        return result;
+    }
+
     Mat contoursRoi = Mat(dilatedEnhancedInverted, roiRect);
 
     // Edges must be white, background must be black.
@@ -279,9 +290,8 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     if (showImageFlags & SHOW_FEATURE_EXTRACTION_FLAG)
     {
         ImageTools::resetNextWindowPosition();
-        ImageTools::showImage("classifyByKnn: contoursRoi", contoursRoi);
-        ImageTools::showImage("classifyByKnn: colorResized", colorResized.getMat());
         ImageTools::showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
+        ImageTools::showImage("classifyByKnn: contoursRoi", contoursRoi);
     }
     return result;
 }
@@ -352,9 +362,6 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     kNearest->setDefaultK(1);
     kNearest->train(samples, ml::ROW_SAMPLE, responseLabels);
 
-    //TODO: load if available
-    kNearest->save("kNearest.yml");
-
     if (showImageFlags & SHOW_KNN_TRAINING_FLAG) {
         ImageTools::resetNextWindowPosition();
         ImageTools::showImage("KNN training samples", samples);
@@ -408,8 +415,8 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
                 qDebug() << "invalid char: responseValue" << responseValue;
                 rectangle(drawing, rect.tl(), rect.br(), Scalar(0,0,255), 2, LINE_4, 0);
                 putText(drawing, cValue, Point(rect.br().x, criteria.maxDigitBottomY + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, Scalar(0,0,255), 3);
-//                ImageTools::resetNextWindowPosition();
-//                ImageTools::showImage("classifyByKnn: digitRoi", digitRoi);
+                // ImageTools::resetNextWindowPosition();
+                // ImageTools::showImage("classifyByKnn: digitRoi", digitRoi);
             }
 
             if (showAllContoursForTest || isValidChar)
@@ -441,7 +448,7 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
     ReaderResult result = ReaderResult(resultValue, precision, MeasureUnit(1, "kg"), digitRecognized);
 
     if (digitRecognized)
-        qDebug() << "Result value:" << result.value << "kg";
+        qDebug() << "ClassifyByKnn result value:" << result.value << "kg";
     else
         qDebug() << "ClassifyByKnn: No digits recognized.";
 
