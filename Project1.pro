@@ -29,7 +29,6 @@ SOURCES += \
     sevensegmentgaugereader.cpp \
     measureunit.cpp \
     readerresult.cpp \
-    imageanalizer.cpp \
     sevensegmentdigitcriteria.cpp \
     sevensegmentdigitfeatures.cpp \
     templatematchfeatures.cpp \
@@ -41,7 +40,6 @@ HEADERS += \
     measureunit.h \
     readerresult.h \
     igaugereader.h \
-    imageanalizer.h \
     sevensegmentdigitcriteria.h \
     sevensegmentdigitfeatures.h \
     templatematchfeatures.h \

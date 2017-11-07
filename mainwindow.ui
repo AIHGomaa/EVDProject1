@@ -546,34 +546,6 @@
      <string>Digit gaps kernel height</string>
     </property>
    </widget>
-   <widget class="QDoubleSpinBox" name="spnTemplateMatchThreshold">
-    <property name="geometry">
-     <rect>
-      <x>210</x>
-      <y>350</y>
-      <width>62</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="toolTip">
-     <string>In degrees</string>
-    </property>
-    <property name="decimals">
-     <number>3</number>
-    </property>
-    <property name="minimum">
-     <double>0.010000000000000</double>
-    </property>
-    <property name="maximum">
-     <double>1.000000000000000</double>
-    </property>
-    <property name="singleStep">
-     <double>0.010000000000000</double>
-    </property>
-    <property name="value">
-     <double>0.850000000000000</double>
-    </property>
-   </widget>
    <widget class="QPushButton" name="btnReadCameraImage">
     <property name="geometry">
      <rect>
@@ -860,6 +832,32 @@
     </property>
     <property name="text">
      <string>knn train</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="chkShowAllContours">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>300</y>
+      <width>16</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_23">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>280</y>
+      <width>111</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show all contours</string>
     </property>
    </widget>
   </widget>

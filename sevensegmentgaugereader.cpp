@@ -1,12 +1,11 @@
 #include "sevensegmentgaugereader.h"
 #include "mainwindow.h"
-#include "imagetools.h"
+#include "ImageTools.h"
 #include "QMessageBox"
 #include "QDebug"
 
 SevenSegmentGaugeReader::SevenSegmentGaugeReader()
 {
-    imageAnalizer = ImageAnalizer();
 }
 
 void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
@@ -53,15 +52,15 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
 
     if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG)
     {
-        imageAnalizer.resetNextWindowPosition();
-        //    imageAnalizer.showImage("Contrast enhancement, histoEqualized", histoEqualized);
-        //    imageAnalizer.showImage("Contrast enhancement, histoEqualizedGrayScaled", histoEqualizedGrayScaled);  // heeft minder effect dan hsv en gamma correct
-        imageAnalizer.showImage("Contrast enhancement, gammaCorrected", gammaCorrected);
-//        imageAnalizer.showImage("Contrast enhancement, gammaCorrectedGrayScaled", gammaCorrectedGrayScaled);
-        //    imageAnalizer.showImage("Contrast enhancement, hsvPlanes[0]", hsvPlanes[0]);
-        //    imageAnalizer.showImage("Contrast enhancement, hsvPlanes[1]", hsvPlanes[1]);
-        //    imageAnalizer.showImage("Contrast enhancement, hsvPlanes[2]", hsvPlanes[2]);
-        //  imageAnalizer.showImage("Contrast enhancement, grayScaled", grayScaled);
+        ImageTools::resetNextWindowPosition();
+        //    ImageTools::showImage("Contrast enhancement, histoEqualized", histoEqualized);
+        //    ImageTools::showImage("Contrast enhancement, histoEqualizedGrayScaled", histoEqualizedGrayScaled);  // heeft minder effect dan hsv en gamma correct
+        ImageTools::showImage("Contrast enhancement, gammaCorrected", gammaCorrected);
+//        ImageTools::showImage("Contrast enhancement, gammaCorrectedGrayScaled", gammaCorrectedGrayScaled);
+        //    ImageTools::showImage("Contrast enhancement, hsvPlanes[0]", hsvPlanes[0]);
+        //    ImageTools::showImage("Contrast enhancement, hsvPlanes[1]", hsvPlanes[1]);
+        //    ImageTools::showImage("Contrast enhancement, hsvPlanes[2]", hsvPlanes[2]);
+        //  ImageTools::showImage("Contrast enhancement, grayScaled", grayScaled);
     }
 }
 
@@ -88,11 +87,11 @@ void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray
     adaptThreshold.copyTo(dst);
 
     if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG) {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("EnhanceImage: srcScaled", srcScaled.getMat());
-        imageAnalizer.showImage("EnhanceImage: contrastEnhanced", contrastEnhanced);
-        imageAnalizer.showImage("EnhanceImage: adaptThreshold", adaptThreshold);
-        imageAnalizer.showImage("EnhanceImage: dst", dst.getMat());
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("EnhanceImage: srcScaled", srcScaled.getMat());
+        ImageTools::showImage("EnhanceImage: contrastEnhanced", contrastEnhanced);
+        ImageTools::showImage("EnhanceImage: adaptThreshold", adaptThreshold);
+        ImageTools::showImage("EnhanceImage: dst", dst.getMat());
     }
 }
 
@@ -104,9 +103,9 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
     cannyEdges.copyTo(dst);
     
     if(showImageFlags & SHOW_SEGMENTATION_FLAG) {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("SegmentImage: src", src);
-        imageAnalizer.showImage("SegmentImage: cannyEdges", cannyEdges);
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("SegmentImage: src", src);
+        ImageTools::showImage("SegmentImage: cannyEdges", cannyEdges);
     }
 }
 
@@ -139,6 +138,12 @@ double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
         angles.push_back (angleRad);
     }
 
+    if (angles.size() == 0)
+    {
+        qDebug() << "no lines found for rotation calculation";
+        return 0;
+    }
+
     double medianAngleRad = ImageTools::median(angles);
     double medianAngleDegr = medianAngleRad * 180.0 / CV_PI;
 
@@ -146,8 +151,8 @@ double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
 
     if (showImageFlags & SHOW_ROTATION_CORRECTION_FLAG)
     {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("calculateRotationDegrees(): disp_lines", disp_lines);
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("calculateRotationDegrees(): disp_lines", disp_lines);
     }
 
     return medianAngleDegr;
@@ -176,9 +181,9 @@ void SevenSegmentGaugeReader::correctRotation(double rotationDegrees, Mat srcCol
 
     if (showImageFlags & SHOW_ROTATION_CORRECTION_FLAG)
     {
-        imageAnalizer.showImage("Feature extract: rotationCorrected", rotationCorrected);
-        imageAnalizer.showImage("Feature extract: thresAfterRotate", thresAfterRotate);
-        imageAnalizer.showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
+        ImageTools::showImage("Feature extract: rotationCorrected", rotationCorrected);
+        ImageTools::showImage("Feature extract: thresAfterRotate", thresAfterRotate);
+        ImageTools::showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
     }
     reEnhancedAfterWarp.copyTo(dstGrayScale);
 }
@@ -189,12 +194,15 @@ bool SevenSegmentGaugeReader::isPotentialDigitOrDecimalPoint(Rect rect, SevenSeg
             // All on reference botom Y
             rect.br().y >= criteria.minDigitBottomY &&
             rect.br().y <= criteria.maxDigitBottomY &&
-            // Size of digits 0 and 2..9
+            // Size of digits 0 and 2..6 and 8..9
             ((rect.height >= criteria.minDigitSize.height && rect.height <= criteria.maxDigitSize.height &&
               rect.width >= criteria.minDigitSize.width && rect.width <= criteria.maxDigitSize.width) ||
              // Size of digit 1
              (rect.height >= criteria.minDigit1Size.height && rect.height <= criteria.maxDigit1Size.height &&
               rect.width >= criteria.minDigit1Size.width && rect.width <= criteria.maxDigit1Size.width) ||
+             // Size of digit 7
+             (rect.height >= criteria.minDigit7Size.height && rect.height <= criteria.maxDigit7Size.height &&
+              rect.width >= criteria.minDigit7Size.width && rect.width <= criteria.maxDigit7Size.width) ||
              // Size of decimal point
              (rect.height >= criteria.minDecimalPointSize.height && rect.height <= criteria.maxDecimalPointSize.height &&
               rect.width >= criteria.minDecimalPointSize.width && rect.width <= criteria.maxDecimalPointSize.width));
@@ -204,7 +212,6 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
 {
     double rotationDegrees = calculateRotationDegrees(edges);
 
-    //TODO: configurable
     if(abs(rotationDegrees) > 0.5)
         correctRotation(rotationDegrees, colorImage, enhancedImage, colorImage, enhancedImage);
 
@@ -242,7 +249,9 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
 
-    Rect roiRect(0, digitCriteria.maxDigitBottomY - digitCriteria.maxDigit1Size.height, dilatedEnhancedInverted.cols, digitCriteria.maxDigit1Size.height);
+    int roiHeight = digitCriteria.maxDigit1Size.height + (digitCriteria.maxDigitBottomY - digitCriteria.minDigitBottomY) * 2 + 0.5;
+    Rect roiRect(0, digitCriteria.maxDigitBottomY + (digitCriteria.maxDigitBottomY - digitCriteria.minDigitBottomY) - roiHeight, dilatedEnhancedInverted.cols, roiHeight);
+//    Rect roiRect(0, digitCriteria.maxDigitBottomY - digitCriteria.maxDigit1Size.height, dilatedEnhancedInverted.cols, digitCriteria.maxDigit1Size.height);
     Mat contoursRoi = Mat(dilatedEnhancedInverted, roiRect);
 
     // Edges must be white, background must be black.
@@ -269,10 +278,10 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
 
     if (showImageFlags & SHOW_FEATURE_EXTRACTION_FLAG)
     {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("classifyByKnn: contoursRoi", contoursRoi);
-        imageAnalizer.showImage("classifyByKnn: colorResized", colorResized.getMat());
-        imageAnalizer.showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("classifyByKnn: contoursRoi", contoursRoi);
+        ImageTools::showImage("classifyByKnn: colorResized", colorResized.getMat());
+        ImageTools::showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
     }
     return result;
 }
@@ -347,8 +356,8 @@ bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     kNearest->save("kNearest.yml");
 
     if (showImageFlags & SHOW_KNN_TRAINING_FLAG) {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("KNN training samples", samples);
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("KNN training samples", samples);
     }
     return true;
 }
@@ -388,7 +397,22 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
             }
 
             bool isValidChar = find(validChars.begin(), validChars.end(), cValue) != validChars.end();
-            if (isValidChar == true)
+
+            // TODO: generic solution for this exception: define size constraints per digit.
+            // Exception for decimal point: don't accept matched digits in rectangle with decimal point size.
+            if (rect.height <= criteria.maxDecimalPointSize.height && responseValue < 10)
+                isValidChar = false;
+
+            if (showAllContoursForTest && !isValidChar)
+            {
+                qDebug() << "invalid char: responseValue" << responseValue;
+                rectangle(drawing, rect.tl(), rect.br(), Scalar(0,0,255), 2, LINE_4, 0);
+                putText(drawing, cValue, Point(rect.br().x, criteria.maxDigitBottomY + DIGIT_TEMPLATE_SIZE.height * 0.5), FONT_HERSHEY_DUPLEX, 1.5, Scalar(0,0,255), 3);
+//                ImageTools::resetNextWindowPosition();
+//                ImageTools::showImage("classifyByKnn: digitRoi", digitRoi);
+            }
+
+            if (showAllContoursForTest || isValidChar)
             {
                 rectangle(drawing, rect.tl(), rect.br(), contourColor, 2, LINE_4, 0);
                 int textX = rect.br().x;
@@ -423,8 +447,8 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
 
     if (showImageFlags & SHOW_CLASSIFICATION_FLAG)
     {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("classifyByKnn: markedDigits", getMarkedImage());
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("classifyByKnn: markedDigits", getMarkedImage());
     }
     return result;
 }
@@ -505,9 +529,7 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, 
         int width = rect.width;
         int height = rect.height;
 
-        //TODO: the correct size depends on display size in source image/ distance to display
         if (height>20 && height < 80 && width>10 && width < 80)
-            //	if(height>2 && width>1)
         {
             Mat roiTest = markedDigits(rect);
 
@@ -618,9 +640,9 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
     Canny(templateDigit8p, templateEdges, templateMatchCannyThreshold1, templateMatchCannyThreshold2);
 
     if (showImageFlags & SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG) {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("multiScaleTemplateMatch: templateDigit8p", templateDigit8p);
-        imageAnalizer.showImage("multiScaleTemplateMatch: templateEdges", templateEdges);
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("multiScaleTemplateMatch: templateDigit8p", templateDigit8p);
+        ImageTools::showImage("multiScaleTemplateMatch: templateEdges", templateEdges);
     }
 
     const float SCALE_START = 1;
@@ -672,8 +694,8 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
             Mat target_clone;
             resize(src, target_clone, Size(0,0), scale, scale);
             rectangle(target_clone, Point(maxLoc.x, maxLoc.y), Point(maxLoc.x + templateWidth, maxLoc.y + templateHeight), Scalar(127), 1);
-            imageAnalizer.resetNextWindowPosition();
-            imageAnalizer.showImage("FindReferenceImage multiscale", target_clone);
+            ImageTools::resetNextWindowPosition();
+            ImageTools::showImage("FindReferenceImage multiscale", target_clone);
             waitKey(100);
         }
     }
@@ -698,7 +720,7 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
     rectangle(markedMatch, Point(startX, startY), Point(endX, endY), Scalar(0, 0, 255), 1);
 
     if (showImageFlags & SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG) {
-        imageAnalizer.showImage("multiScaleTemplateMatch, markedMatch", markedMatch);
+        ImageTools::showImage("multiScaleTemplateMatch, markedMatch", markedMatch);
     }
 
     return SevenSegmentDigitFeatures(endX - startX, endY - startY, endY, startX, -1, foundMatchFeatures.scale);

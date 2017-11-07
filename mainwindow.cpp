@@ -4,6 +4,7 @@
 #include "QDebug"
 #include "QMessageBox"
 #include "sevensegmentgaugereader.h"
+#include "imageTools.h"
 #include <iomanip> // setprecision
 #include <sstream> // stringstream
 
@@ -23,9 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->cmbTestImages->addItem(filename);
         }
     }
-
     gaugeReader = new SevenSegmentGaugeReader();
-    imageAnalizer = ImageAnalizer();
 }
 
 MainWindow::~MainWindow()
@@ -54,7 +53,7 @@ void MainWindow::configGaugeReader()
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
     gr->referenceImageDir = referenceImageDir.toStdString();
 
-    gr->templateMatchThreshold = ui->spnTemplateMatchThreshold->value();
+//    gr->templateMatchThreshold = ui->spnTemplateMatchThreshold->value();
 
     gr->showImageFlags = gr->SHOW_NONE;
     if (ui->chkShowMainImages->checkState())
@@ -74,6 +73,8 @@ void MainWindow::configGaugeReader()
     if (ui->chkShowClassificationImages->checkState())
         gr->showImageFlags |= gr->SHOW_CLASSIFICATION_FLAG;
 
+    gr->showAllContoursForTest = ui->chkShowAllContours->checkState();
+
     gr->initialize();
 }
 
@@ -90,9 +91,9 @@ void MainWindow::processImage()
 
     if (ui->chkShowMainImages->checkState())
     {
-        imageAnalizer.resetNextWindowPosition();
-        imageAnalizer.showImage("MainWindow: Original image", gaugeReader->getSourceImage());
-        imageAnalizer.showImage("MainWindow: Marked digits", gaugeReader->getMarkedImage());
+        ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("MainWindow: Original image", gaugeReader->getSourceImage());
+        ImageTools::showImage("MainWindow: Marked digits", gaugeReader->getMarkedImage());
     }
 
     if (result.successful)
@@ -145,7 +146,7 @@ void MainWindow::on_btnReadCameraImage_clicked()
 
     destroyAllWindows();
 
-    imageAnalizer.showImage("Camera input", cameraImage, 0, 0);
+    ImageTools::showImage("Camera input", cameraImage, 0, 0);
 
     vc.open(0);
     if (!vc.isOpened()) {
@@ -176,7 +177,7 @@ void MainWindow::on_btnReadCameraImage_clicked()
         cameraImage.copyTo(cameraPreview);
         line(cameraPreview, Point(0, blurredRowHeight), Point(cameraPreview.cols - 1, blurredRowHeight), Scalar(0, 255, 0), 1);
         line(cameraPreview, Point(0, cameraPreview.rows - blurredRowHeight), Point(cameraPreview.cols - 1, cameraPreview.rows - blurredRowHeight), Scalar(0, 255, 0), 1);
-        imageAnalizer.showImage("Camera input", cameraPreview, 0, 0);
+        ImageTools::showImage("Camera input", cameraPreview, 0, 0);
 
         int key = waitKey(200);
         if (key == 13 || key == 27)
@@ -319,5 +320,10 @@ void MainWindow::on_chkShowFeatureExtractKnnTraining_clicked()
 void MainWindow::on_chkShowFeatureExtractRotationCorrection_clicked()
 {
     destroyAllWindows();
+    processImage();
+}
+
+void MainWindow::on_chkShowAllContours_clicked()
+{
     processImage();
 }

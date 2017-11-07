@@ -21,12 +21,15 @@ public:
 
     int minDigitBottomY;
     int maxDigitBottomY;
-    // Digits 0 and 2..9
+    // Digits 0 and 2..6 and 8..9
     Size minDigitSize;
     Size maxDigitSize;
     // Digit 1
     Size minDigit1Size;
     Size maxDigit1Size;
+    // Digit 7
+    Size minDigit7Size;
+    Size maxDigit7Size;
     // Decimal point
     Size minDecimalPointSize;
     Size maxDecimalPointSize;

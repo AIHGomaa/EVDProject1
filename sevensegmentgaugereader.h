@@ -7,7 +7,7 @@
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
 #include "igaugereader.h"
-#include "imageanalizer.h"
+#include "imageTools.h"
 #include "templatematchfeatures.h"
 #include "sevensegmentdigitfeatures.h"
 #include "sevensegmentdigitcriteria.h"
@@ -32,7 +32,6 @@ public:
 
     uint showImageFlags = SHOW_FEATURE_EXTRACTION_FLAG | SHOW_CLASSIFICATION_FLAG;
 
-    //TODO: configurable in UI
     bool showAllContoursForTest = false;
 
     int adaptiveThresholdBlockSize = 35;
@@ -55,12 +54,10 @@ public:
     int digitDilateKernelWidth = 1;
     int digitDilateKernelHeight = 7;
 
-    //TODO: configure in UI
     int templateMatchCannyThreshold1 = 50;
     int templateMatchCannyThreshold2 = 50 * 4;
     bool templayteMatchByEdges = true;
     int templateMatchMethod = TM_CCOEFF; // TM_SQDIFF_NORMED, TM_SQDIFF
-
     double templateMatchThreshold = 0.95;
 
     SevenSegmentGaugeReader();
@@ -77,26 +74,22 @@ private:
     const Size DIGIT_TEMPLATE_SIZE = Size(DIGIT_TEMPLATE_X_RESOLUTION, DIGIT_TEMPLATE_Y_RESOLUTION);
     SevenSegmentDigitCriteria digitCriteria;
     Mat srcImage, markedDigits;
-
     Ptr<cv::ml::KNearest> kNearest = cv::ml::KNearest::create();
+
     void EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled);
     void SegmentImage(Mat src, OutputArray dst);
     vector<SevenSegmentDigitFeatures> ExtractFeatures(Mat edges, Mat enhancedImage, Mat colorImage, OutputArray colorResized, OutputArray colorResizedFiltered);
-    ImageAnalizer imageAnalizer;
     vector<Point2d> getPoint(Point2d p1 , Point2d p2);
     Mat loadReferenceImage(string fileName, int flags = CV_LOAD_IMAGE_GRAYSCALE);
     SevenSegmentDigitFeatures extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src);
     bool loadKNNDataAndTrainKNN();
     double calculateRotationDegrees(Mat src);
     void correctRotation(double rotationDegrees, Mat srcColor, Mat srcGrayScale, OutputArray dstColor, OutputArray dstGrayScale);
-//    double median(vector<double> collection);
     bool isPotentialDigitOrDecimalPoint(Rect rect, SevenSegmentDigitCriteria digitCriteria);
-//    static bool contourLeftToRightComparer(const vector<Point> a, const vector<Point> b);
     ReaderResult classifyDigitsBySegmentPositions(Mat src, vector<vector<Point>> contours);
     ReaderResult classifyDigitsByKNearestNeighborhood(vector<SevenSegmentDigitFeatures> digitFeatures, Mat colorResized, Mat colorResizedFiltered, SevenSegmentDigitCriteria digitCriteria);
     //    ReaderResult classifyDigitsByTemplateMatching(Mat src, SevenSegmentDigitFeatures digitFeatures);
     void enhanceContrast(Mat src, Mat dst);
-//    Mat correctGamma(Mat &img, double gamma);
 };
 
 #endif // SEVENSEGMENTGAUGEREADER_H

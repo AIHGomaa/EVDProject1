@@ -7,8 +7,6 @@
 #include "opencv2/opencv.hpp"
 #include "igaugereader.h"
 #include "sevensegmentgaugereader.h"
-#include "imageanalizer.h"
-
 namespace Ui {
 class MainWindow;
 }
@@ -75,13 +73,14 @@ private slots:
 
     void on_chkShowFeatureExtractRotationCorrection_clicked();
 
+    void on_chkShowAllContours_clicked();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory
     QString referenceImageDir = "referenceImages\\";
     QString testImageDir = "testImages\\";
     IGaugeReader *gaugeReader;
-    ImageAnalizer imageAnalizer;
     Mat srcImage;
 
     void configGaugeReader();

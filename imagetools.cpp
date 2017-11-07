@@ -1,11 +1,42 @@
 #include "imagetools.h"
+#include "QDebug"
 
 using namespace cv;
 using namespace std;
 
+
 ImageTools::ImageTools()
 {
 
+}
+
+int ImageTools::windowCounter = 0;
+
+void ImageTools::showImage(const char *winname, const Mat img, int x, int y)
+{
+    if (img.cols == 0 || img.rows == 0)
+    {
+        qDebug() << "ImageAnalizer::showImage(): image width or height is 0." << winname;
+        return;
+    }
+    namedWindow(winname, CV_WINDOW_AUTOSIZE);   // OpenCV doc: If a window with the same name already exists, the function does nothing.
+    moveWindow(winname, x, y);
+    imshow(winname, img);
+}
+
+void ImageTools::showImage(const char *winname, const Mat img, int position)
+{
+    showImage(winname, img, (position % 4) * 200, (position / 4) * 100);
+}
+
+void ImageTools::showImage(const char *winname, const Mat img)
+{
+    showImage(winname, img, windowCounter++);
+}
+
+void ImageTools::resetNextWindowPosition()
+{
+    windowCounter = 0;
 }
 
 bool ImageTools::contourLeftToRightComparer(const vector<Point> a, const vector<Point> b)
@@ -19,6 +50,8 @@ bool ImageTools::contourLeftToRightComparer(const vector<Point> a, const vector<
 double ImageTools::median(vector<double> collection)
 {
     size_t size = collection.size();
+    if (size == 0)
+        return 0;
     sort(collection.begin(), collection.end());
     if (size  % 2 == 0)
         return (collection[size / 2 - 1] + collection[size / 2]) / 2;

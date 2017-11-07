@@ -8,10 +8,14 @@ SevenSegmentDigitFeatures::SevenSegmentDigitFeatures(int width, int height, int 
     this->leftX = leftX;
     this->value = value;
     this->imageScale = imageScale;
+    this->boundRect = cv::Rect(leftX, bottomY - height, width, height);
 }
 
 SevenSegmentDigitFeatures::SevenSegmentDigitFeatures(cv::Rect boundRect)
 {
     this->boundRect = boundRect;
-    //TODO: other features/ default values
+    this->width = boundRect.width;
+    this->height = boundRect.height;
+    this->leftX = boundRect.x;
+    this->bottomY = boundRect.y + boundRect.height;
 }
