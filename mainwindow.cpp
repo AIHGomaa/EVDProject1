@@ -110,20 +110,18 @@ void MainWindow::processImage()
 
 void MainWindow::on_btnReadImageValue_clicked()
 {
+    // Prepare UI for new process
     destroyAllWindows();
-
     auto childList = findChildren<QMainWindow*>();
     for (auto child : childList)
-    {
         child->close();
-    }
 
+    // Load image
     QString filename = ui->cmbTestImages->currentText();
     QString path = QString(testImageDir + filename);
     srcImage = imread(path.toStdString(), CV_LOAD_IMAGE_COLOR);
-
     if(!srcImage.data){
-        ui->statusBar->showMessage(QString("could not open image " + path), 0);
+        ui->statusBar->showMessage(QString("Could not open image " + path + "."), 0);
         return;
     }
 
@@ -139,24 +137,39 @@ void MainWindow::on_btnReadImageValue_clicked()
 
 void MainWindow::on_btnReadCameraImage_clicked()
 {
+    // Toggle camera input on/off
+    bool camRunning1, camRunning2;
+    camRunningMutex.lock();
+    cameraRunning = !cameraRunning;
+    camRunning1 = cameraRunning;
+    camRunningMutex.unlock();
+    if (!camRunning1)
+        return;
+
+    // Prepare UI for new process
+    ui->btnReadCameraImage->setText("OK");
+    ui->btnReadImageValue->setEnabled(false);
+    destroyAllWindows();
+
     QString info;
     VideoCapture vc;
     Mat rawCameraInput(400, 300, CV_8SC4);
     Mat cameraImage(400, 300, CV_8SC4), blurredTopRange, blurredBottomRange;
 
-    destroyAllWindows();
-
     ImageTools::showImage("Camera input", cameraImage, 0, 0);
 
-    vc.open(0);
+    vc.open(1);
+    if (!vc.isOpened())
+        vc.open(0);
     if (!vc.isOpened()) {
-        info.append("Could not take a snapshot, probably no camera connected.");
+        info.append("Could not open camera.");
         ui->statusBar->showMessage(info, 0);
         return;
     }
 
     vc >> rawCameraInput;
 
+    // calculate roi for preview
     int cameraImageCols = rawCameraInput.cols < rawCameraInput.rows ?
                 rawCameraInput.cols : (int)(rawCameraInput.rows * 3 / 4.0 + 0.5);
     int cameraImageLeft = rawCameraInput.cols < rawCameraInput.rows ?
@@ -179,13 +192,17 @@ void MainWindow::on_btnReadCameraImage_clicked()
         line(cameraPreview, Point(0, cameraPreview.rows - blurredRowHeight), Point(cameraPreview.cols - 1, cameraPreview.rows - blurredRowHeight), Scalar(0, 255, 0), 1);
         ImageTools::showImage("Camera input", cameraPreview, 0, 0);
 
-        int key = waitKey(200);
+        int key = waitKey(50);
         if (key == 13 || key == 27)
             break;
 
         vc >> rawCameraInput;
         cameraImage = rawCameraInput(cameraImageRoiRect);
-    } while(true);
+
+        camRunningMutex.lock();
+        camRunning2 = cameraRunning;
+        camRunningMutex.unlock();
+    } while(camRunning2);
 
     vc.release();
     destroyWindow("Camera input");
@@ -198,6 +215,9 @@ void MainWindow::on_btnReadCameraImage_clicked()
     cameraImage.copyTo(srcImage);
 
     processImage();
+
+    ui->btnReadCameraImage->setText("Read camera capture");
+    ui->btnReadImageValue->setEnabled(true);
 }
 
 void MainWindow::on_spnEnhancementadaptiveThresholdBlockSize_valueChanged()

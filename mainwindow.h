@@ -2,11 +2,13 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <mutex>    // lock
 #include "opencv/cv.h"
 #include "opencv/highgui.h"
 #include "opencv2/opencv.hpp"
 #include "igaugereader.h"
 #include "sevensegmentgaugereader.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -82,6 +84,8 @@ private:
     QString testImageDir = "testImages\\";
     IGaugeReader *gaugeReader;
     Mat srcImage;
+    bool cameraRunning = false;
+    mutex camRunningMutex;
 
     void configGaugeReader();
     void processImage();
