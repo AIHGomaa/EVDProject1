@@ -67,7 +67,7 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
 void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled)
 {
     // Fixed input resolution, to make kernel sizes independent of scale.
-    resize(src, srcScaled, IMG_SIZE, 0, 0, INTER_LINEAR);
+resize(src, srcScaled, IMG_SIZE, 0, 0, INTER_LINEAR);
 
     Mat contrastEnhanced(IMG_SIZE, CV_8UC1);
     enhanceContrast(srcScaled.getMat(), contrastEnhanced);
@@ -99,7 +99,7 @@ void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
 {
     Mat cannyEdges(IMG_SIZE, CV_8UC1, 1);
     Canny(src, cannyEdges, cannyThreshold1, cannyThreshold2, cannyAppertureSize, true);
-    
+
     cannyEdges.copyTo(dst);
     
     if(showImageFlags & SHOW_SEGMENTATION_FLAG) {
@@ -274,7 +274,7 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     
     sort(contours.begin(), contours.end(), ImageTools::contourLeftToRightComparer);
     
-    vector<vector<Point>> contoursPoly( contours.size() );
+    vector<vector<Point>> contoursPoly(contours.size());
     vector<SevenSegmentDigitFeatures> result;
 
     // Derived from http://answers.opencv.org/question/19374/number-plate-segmentation-c/
@@ -291,6 +291,7 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     {
         ImageTools::resetNextWindowPosition();
         ImageTools::showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
+//        ImageTools::showImage("classifyByKnn: dilatedEnhancedInverted", dilatedEnhancedInverted);
         ImageTools::showImage("classifyByKnn: contoursRoi", contoursRoi);
     }
     return result;
@@ -303,6 +304,7 @@ void SevenSegmentGaugeReader::initialize() {
 }
 
 //TODO: Save/load training data: knn->save("my.yml") and knn->load("my.yml")
+// Derived from https://github.com/MicrocontrollersAndMore/OpenCV_3_License_Plate_Recognition_Cpp
 bool SevenSegmentGaugeReader::loadKNNDataAndTrainKNN() {
     Mat samples;
     vector<int> responseLabels;
@@ -385,18 +387,19 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
     int precision = 0;
     bool digitRecognized = false;
 
+    // Derived from https://github.com/MicrocontrollersAndMore/OpenCV_3_License_Plate_Recognition_Cpp
     for(uint i = 0; i < digitFeatures.size(); i++) {
         SevenSegmentDigitFeatures currentDigitFeatures = digitFeatures[i];
         Rect rect = currentDigitFeatures.boundRect;
         if( showAllContoursForTest || isPotentialDigitOrDecimalPoint(rect, criteria)) {
-            Mat digitRoi = colorResizedFiltered(rect);
-            digitRoi.convertTo(digitRoi, CV_32F);
-            Mat roi, sample;
-            resize(digitRoi, roi, DIGIT_TEMPLATE_SIZE);
-            roi.reshape(1, 1).convertTo(sample, CV_32F);
+        Mat digitRoi = colorResizedFiltered(rect);
+        digitRoi.convertTo(digitRoi, CV_32F);
+        Mat roi, sample;
+        resize(digitRoi, roi, DIGIT_TEMPLATE_SIZE);
+        roi.reshape(1, 1).convertTo(sample, CV_32F);
 
-            Mat knnResult;
-            int responseValue = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), knnResult);
+        Mat knnResult;
+        int responseValue = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), knnResult);
             String cValue = to_string(responseValue);
             if (responseValue == 10) {
                 decimalFactor /= 10;
@@ -516,17 +519,17 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, 
     Mat drawing(markedDigits);
 
     //Mask derived from https://www.pyimagesearch.com/2017/02/13/recognizing-digits-with-opencv-and-python/
-    map<vector<int>, int> DIGITS_LOOKUP;
-    vector<int> zero { 1, 1, 1, 0, 1, 1, 1 }; DIGITS_LOOKUP[zero] = 1;
-    vector<int> one{ 0, 0, 1, 0, 0, 1, 0 }; DIGITS_LOOKUP[one] = 2;
-    vector<int> two{ 1, 0, 1, 1, 1, 0, 1 }; DIGITS_LOOKUP[two] = 3;
-    vector<int> three{ 1, 0, 1, 1, 0, 1, 1 }; DIGITS_LOOKUP[three] = 4;
-    vector<int> four{ 0, 1, 1, 1, 0, 1, 0 }; DIGITS_LOOKUP[four] = 5;
-    vector<int> five{ 1, 1, 0, 1, 0, 1, 1 }; DIGITS_LOOKUP[five] = 6;
-    vector<int> six{ 1, 1, 0, 1, 1, 1, 1 }; DIGITS_LOOKUP[six] = 7;
-    vector<int> seven{ 1, 0, 1, 0, 0, 1, 0 }; DIGITS_LOOKUP[seven] = 8;
-    vector<int> eight{ 1, 1, 1, 1, 1, 1, 1 }; DIGITS_LOOKUP[eight] = 9;
-    vector<int> nine{ 1, 1, 1, 1, 0, 1, 1 }; DIGITS_LOOKUP[nine] = 10;
+    map<vector<int>, int> digitsLookup;
+    vector<int> zero { 1, 1, 1, 0, 1, 1, 1 }; digitsLookup[zero] = 1;
+    vector<int> one{ 0, 0, 1, 0, 0, 1, 0 }; digitsLookup[one] = 2;
+    vector<int> two{ 1, 0, 1, 1, 1, 0, 1 }; digitsLookup[two] = 3;
+    vector<int> three{ 1, 0, 1, 1, 0, 1, 1 }; digitsLookup[three] = 4;
+    vector<int> four{ 0, 1, 1, 1, 0, 1, 0 }; digitsLookup[four] = 5;
+    vector<int> five{ 1, 1, 0, 1, 0, 1, 1 }; digitsLookup[five] = 6;
+    vector<int> six{ 1, 1, 0, 1, 1, 1, 1 }; digitsLookup[six] = 7;
+    vector<int> seven{ 1, 0, 1, 0, 0, 1, 0 }; digitsLookup[seven] = 8;
+    vector<int> eight{ 1, 1, 1, 1, 1, 1, 1 }; digitsLookup[eight] = 9;
+    vector<int> nine{ 1, 1, 1, 1, 0, 1, 1 }; digitsLookup[nine] = 10;
 
     string digits = "";
 
@@ -548,15 +551,22 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, 
             int dH = int(roiH * 0.15);
             int dHC = int(roiH * 0.05);
 
-            //# define the set of 7 segments
+            // define the set of 7 segments
             vector<vector<Point2d>> segments;
-            vector<Point2d> segment0 = getPoint(Point2d(5, 0), Point2d(w - 2, dH + 2)); // top										0
-            vector<Point2d> segment1 = getPoint(Point2d(3, 5), Point2d(dW + 5, h / 2)); // top left									1
-            vector<Point2d> segment2 = getPoint(Point2d(w - dW, 0), Point2d(w, h / 2)); // top right                                2
-            vector<Point2d> segment3 = getPoint(Point2d(5, (h / 2) - (dHC + 2)), Point2d(w - 5, (h / 2) + (dHC + 2))); // center	3
-            vector<Point2d> segment4 = getPoint(Point2d(0, (h / 2)), Point2d(dW, h)); // bottom left								4
-            vector<Point2d> segment5 = getPoint(Point2d(w - dW - 5, h / 2), Point2d(w - 5, h)); // bottom right						5
-            vector<Point2d> segment6 = getPoint(Point2d(0, h - dH - 2), Point2d(w - 5, h)); // bottom
+            vector<Point2d> segment0 =
+                getPoint(Point2d(5, 0), Point2d(w-2, dH + 2)); // top	0
+            vector<Point2d> segment1 =
+                getPoint(Point2d(3, 5), Point2d(dW + 5, h/2)); // top left 1
+            vector<Point2d> segment2 =
+                getPoint(Point2d(w - dW, 0), Point2d(w, h/2)); // top right 2
+            vector<Point2d> segment3 =
+                getPoint(Point2d(5, (h/2) - (dHC+2)), Point2d(w-5, (h/2) + (dHC+2))); // center 3
+            vector<Point2d> segment4 =
+                getPoint(Point2d(0, (h/2)), Point2d(dW, h)); // bottom left 4
+            vector<Point2d> segment5 =
+                getPoint(Point2d(w - dW-5, h/2), Point2d(w-5, h)); // bottom right 5
+            vector<Point2d> segment6 =
+                getPoint(Point2d(0, h-dH-2), Point2d(w-5, h)); // bottom
             segments.push_back(segment0);
             segments.push_back(segment1);
             segments.push_back(segment2);
@@ -591,8 +601,8 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, 
                 i1++;
             }
 
-            int digit = DIGITS_LOOKUP[on];
-            if (width < 20 && height > 20 && digit == 9) { //with digit 1 the contour is not wide
+            int digit = digitsLookup[on];
+            if (width < 20 && height > 20 && digit == 9) { // with digit 1 has smaller contour
                 digit = 2;
             }
             if (digit > 0) {

@@ -53,7 +53,7 @@ void MainWindow::configGaugeReader()
     gr->houghMinLineLength = ui->spnFeatureExtractionHoughMinLineLength->value();
     gr->referenceImageDir = referenceImageDir.toStdString();
 
-//    gr->templateMatchThreshold = ui->spnTemplateMatchThreshold->value();
+    //    gr->templateMatchThreshold = ui->spnTemplateMatchThreshold->value();
 
     gr->showImageFlags = gr->SHOW_NONE;
     if (ui->chkShowMainImages->checkState())
@@ -132,7 +132,7 @@ void MainWindow::on_btnReadImageValue_clicked()
     blur(blurredTopRange, blurredTopRange, Size(25, 25), Point(-1, -1), BORDER_DEFAULT);
     blur(blurredBottomRange, blurredBottomRange, Size(25, 25), Point(-1, -1), BORDER_DEFAULT);
 
-   processImage();
+    processImage();
 }
 
 void MainWindow::on_btnReadCameraImage_clicked()

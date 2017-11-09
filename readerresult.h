@@ -8,7 +8,7 @@ class ReaderResult
 {
 public:
     ReaderResult();
-    ReaderResult(float value, int precision, MeasureUnit unit, bool succesfull);
+    ReaderResult(float value, int precision, MeasureUnit unit, bool succesful);
     float value;
     MeasureUnit unit;
     bool successful = false;
