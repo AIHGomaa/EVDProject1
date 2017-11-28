@@ -77,13 +77,19 @@ private slots:
 
     void on_chkShowAllContours_clicked();
 
+    void on_spnEnhancementBasicThreshold_valueChanged();
+
+    void on_spnEnhancementGammaCorrectionFactor_valueChanged();
+
+    void on_spnEnhancementThreshFactor_valueChanged();
+
 private:
     Ui::MainWindow *ui;
     // image folders in project working directory
     QString referenceImageDir = "referenceImages\\";
     QString testImageDir = "testImages\\";
     IGaugeReader *gaugeReader;
-    Mat srcImage;
+    Mat srcImage, roi;
     bool cameraRunning = false;
     mutex camRunningMutex;
 

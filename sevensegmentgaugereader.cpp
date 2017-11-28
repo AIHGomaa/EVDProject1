@@ -24,23 +24,39 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
     //    cvtColor(histoEqualized, histoEqualizedGrayScaled, COLOR_BGR2GRAY);
 
     // Option 2:
-    // n-th root gamma correction
-    // Test result: best option. Significantly better contrast on bright images. Less effect on dark images with bright segments.
-    // Gamma 0.25 is too dark, 0.5 is better.
-    Mat gammaCorrectedGrayScaled;
-    Mat gammaCorrected = ImageTools::correctGamma(src, 0.5);
-    cvtColor(gammaCorrected, gammaCorrectedGrayScaled, COLOR_BGR2GRAY);
-
-    // Option 3:
     // Take one of the HSV channels.
     // Test result: Value channel has the best contrast (active digits have high value),
     // but effect is slightly less than gamma correction.
-    //    Mat hsv;
-    //    cvtColor(src, hsv, COLOR_BGR2HSV);
-    //    Mat hsvPlanes[3];
-    //    split(hsv, hsvPlanes);
+    Mat hsv;
+    cvtColor(src, hsv, COLOR_BGR2HSV);
+    Mat hsvPlanes[3];
+    split(hsv, hsvPlanes);
 
-    // TODO: try combinations of gamma correction, and V-layer.
+    // Option 3:
+    // n-th root gamma correction based on mean pixel value
+    // Test result: best option. Significantly better contrast on bright images. Less effect on dark images with bright segments.
+    // Gamma 4 is too dark, 2 is better.
+    // Calculation of gamma derived from https://imagej.nih.gov/ij/plugins/auto-gamma.html
+    // and www.acsij.org/acsij/article/download/390/344
+
+    //TEST
+    Mat grayScaled;
+    cvtColor(src, grayScaled, COLOR_BGR2GRAY);
+
+
+    uchar mean = cv::mean(hsvPlanes[2]).val[0];
+//    double gamma = log10(1/2.0f) / log10(mean / 255.0f) * gammaCorrectionFactor;
+    //    double invGamma = log10(mean/255.0f) / log10(1/2.0f) * gammaCorrectionFactor;
+    double gamma = gammaCorrectionFactor;
+
+//    Mat multiplied = hsvPlanes[2] * 127.0/mean;
+
+
+    qDebug() << "mean" << mean;
+    qDebug() << "gamma" << gamma;
+
+    Mat gammaCorrected = ImageTools::correctGamma(hsvPlanes[2], gamma);
+
 
     // Option 4: Without contrast enhancement.
     // Test result: works for dark images with bright segments. Not sufficient for bright images.
@@ -48,18 +64,19 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
     //    Mat grayScaled(src.rows, src.cols, CV_8UC1);
     //    cvtColor(src, grayScaled, COLOR_RGB2GRAY);
 
-    gammaCorrectedGrayScaled.copyTo(dst);
+    gammaCorrected.copyTo(dst);
 
     if (showImageFlags & SHOW_IMAGE_ENHANCEMENT_FLAG)
     {
         ImageTools::resetNextWindowPosition();
+        ImageTools::showImage("Contrast enhancement, src", src);
         //    ImageTools::showImage("Contrast enhancement, histoEqualized", histoEqualized);
-        //    ImageTools::showImage("Contrast enhancement, histoEqualizedGrayScaled", histoEqualizedGrayScaled);  // heeft minder effect dan hsv en gamma correct
+        //    ImageTools::showImage("Contrast enhancement, histoEqualizedGrayScaled", histoEqualizedGrayScaled);  // has less effect than hsv and gamma correct
+        //        ImageTools::showImage("Contrast enhancement, hsvPlanes[0]", hsvPlanes[0]);
+        //        ImageTools::showImage("Contrast enhancement, hsvPlanes[1]", hsvPlanes[1]);
+        ImageTools::showImage("Contrast enhancement, hsvPlanes[2]", hsvPlanes[2]);
+        ImageTools::showImage("Contrast enhancement, grayScaled", grayScaled);
         ImageTools::showImage("Contrast enhancement, gammaCorrected", gammaCorrected);
-        //        ImageTools::showImage("Contrast enhancement, gammaCorrectedGrayScaled", gammaCorrectedGrayScaled);
-        //    ImageTools::showImage("Contrast enhancement, hsvPlanes[0]", hsvPlanes[0]);
-        //    ImageTools::showImage("Contrast enhancement, hsvPlanes[1]", hsvPlanes[1]);
-        //    ImageTools::showImage("Contrast enhancement, hsvPlanes[2]", hsvPlanes[2]);
         //  ImageTools::showImage("Contrast enhancement, grayScaled", grayScaled);
     }
 }
@@ -67,19 +84,25 @@ void SevenSegmentGaugeReader::enhanceContrast(Mat src, Mat dst)
 void SevenSegmentGaugeReader::EnhanceImage(Mat src, OutputArray dst, OutputArray srcScaled)
 {
     // Fixed input resolution, to make kernel sizes independent of scale.
-resize(src, srcScaled, IMG_SIZE, 0, 0, INTER_LINEAR);
+    resize(src, srcScaled, imgSize, 0, 0, INTER_LINEAR);
 
-    Mat contrastEnhanced(IMG_SIZE, CV_8UC1);
-    enhanceContrast(srcScaled.getMat(), contrastEnhanced);
-
-    Mat blurred(IMG_SIZE, CV_8UC1);
+    Mat blurred(imgSize, CV_8UC1);
     // Blur is too strong on lowest resolution of Honeywell Dolphin. Maybe useful for higher resolutions
     //    blur(grayScaled, blurred, Size(gaussianBlurSize, gaussianBlurSize));
-    GaussianBlur(contrastEnhanced, blurred, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);  // remove small noise
+    GaussianBlur(srcScaled.getMat(), blurred, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);  // remove small noise
 
-    Mat adaptThreshold(IMG_SIZE, CV_8UC1);
+    Mat contrastEnhanced(imgSize, CV_8UC1);
+    enhanceContrast(blurred, contrastEnhanced);
+
+    double max;
+    minMaxLoc(contrastEnhanced, NULL, &max, NULL, NULL, noArray());
+
+    Mat adaptThreshold(imgSize, CV_8UC1);
     // THRESH_BINARY_INV: Display segments are lighted. We need black segments.
-    adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
+    //TEST
+//    threshold(contrastEnhanced, adaptThreshold, max * enhancementThreshFactor, 255, THRESH_BINARY_INV);
+//    threshold(contrastEnhanced, adaptThreshold, enhanceThreshold, 255, THRESH_BINARY_INV);
+        adaptiveThreshold(contrastEnhanced, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
     //    adaptiveThreshold(blurred, adaptThreshold, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, adaptiveThresholdBlockSize, adaptivethresholdC);
 
     //GaussianBlur(adaptThreshold, dst, Size(gaussianBlurSize, gaussianBlurSize), 0, 0);
@@ -97,7 +120,7 @@ resize(src, srcScaled, IMG_SIZE, 0, 0, INTER_LINEAR);
 
 void SevenSegmentGaugeReader::SegmentImage(Mat src, OutputArray dst)
 {
-    Mat cannyEdges(IMG_SIZE, CV_8UC1, 1);
+    Mat cannyEdges(imgSize, CV_8UC1, 1);
     Canny(src, cannyEdges, cannyThreshold1, cannyThreshold2, cannyAppertureSize, true);
 
     cannyEdges.copyTo(dst);
@@ -115,7 +138,7 @@ double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
     vector<cv::Vec4i> hou;
     cv::HoughLinesP(edges, hou, houghDistanceResolution, houghAngleResolutionDegrees * CV_PI/180.0, houghVotesThreshold, houghMinLineLength, houghMaxLineGap);
 
-    cv::Mat disp_lines(IMG_SIZE, CV_8UC1, cv::Scalar(0, 0, 0));
+    cv::Mat disp_lines(imgSize, CV_8UC1, cv::Scalar(0, 0, 0));
     double angleRad;
     unsigned nLines = hou.size();
 
@@ -147,7 +170,7 @@ double SevenSegmentGaugeReader::calculateRotationDegrees(Mat edges)
     double medianAngleRad = ImageTools::median(angles);
     double medianAngleDegr = medianAngleRad * 180.0 / CV_PI;
 
-    std::cout << "mean angle: " << medianAngleRad << "rad, " << medianAngleDegr << "degr" << std::endl;
+    std::cout << "median angle: " << medianAngleRad << "rad, " << medianAngleDegr << "degr" << std::endl;
 
     if (showImageFlags & SHOW_ROTATION_CORRECTION_FLAG)
     {
@@ -163,7 +186,7 @@ void SevenSegmentGaugeReader::correctRotation(double rotationDegrees, Mat srcCol
     // Derived from https://stackoverflow.com/questions/2289690/opencv-how-to-rotate-iplimage
     Point2f centerPoint(srcGrayScale.cols/2.0F, srcGrayScale.rows/2.0F);
     Mat rotationMatrix = getRotationMatrix2D(centerPoint, rotationDegrees, 1.0);
-    Mat rotationCorrected(IMG_SIZE, CV_8UC1);
+    Mat rotationCorrected(imgSize, CV_8UC1);
 
     // White border values
     warpAffine(srcGrayScale, rotationCorrected, rotationMatrix, srcGrayScale.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
@@ -171,16 +194,18 @@ void SevenSegmentGaugeReader::correctRotation(double rotationDegrees, Mat srcCol
 
     Mat thresAfterRotate;
     // High threshold for thicker digit segments.
-    threshold(rotationCorrected, thresAfterRotate, 191, 255, THRESH_BINARY);
+    threshold(rotationCorrected, thresAfterRotate, 160, 255, THRESH_BINARY);
 
     Mat morphKernel = getStructuringElement(MORPH_RECT, Size(dilateKernelSize, dilateKernelSize));
-    Mat reEnhancedAfterWarp(IMG_SIZE, CV_8UC1);
+    Mat reEnhancedAfterWarp(imgSize, CV_8UC1);
     // Mat morphKernel = getStructuringElement(MORPH_RECT, Size(5, 5), Point(2, 2));
     // morphologyEx(srcCanny, srcCanny, MORPH_CLOSE, morphKernel);
     morphologyEx(thresAfterRotate, reEnhancedAfterWarp, MORPH_OPEN, morphKernel);
 
+    qDebug() << "correctRotation()";
     if (showImageFlags & SHOW_ROTATION_CORRECTION_FLAG)
     {
+        qDebug() << "correctRotation(), SHOW_ROTATION_CORRECTION_FLAG";
         ImageTools::showImage("Feature extract: rotationCorrected", rotationCorrected);
         ImageTools::showImage("Feature extract: thresAfterRotate", thresAfterRotate);
         ImageTools::showImage("Feature extract: reEnhancedAfterWarp", reEnhancedAfterWarp);
@@ -291,13 +316,18 @@ vector<SevenSegmentDigitFeatures> SevenSegmentGaugeReader::ExtractFeatures(Mat e
     {
         ImageTools::resetNextWindowPosition();
         ImageTools::showImage("classifyByKnn: colorResizedFiltered", colorResizedFiltered.getMat());
-//        ImageTools::showImage("classifyByKnn: dilatedEnhancedInverted", dilatedEnhancedInverted);
+        //        ImageTools::showImage("classifyByKnn: dilatedEnhancedInverted", dilatedEnhancedInverted);
         ImageTools::showImage("classifyByKnn: contoursRoi", contoursRoi);
     }
     return result;
 }
 
-void SevenSegmentGaugeReader::initialize() {
+void SevenSegmentGaugeReader::initialize(int cols, int rows) {
+    yResolution = ((double)rows * X_RESOLUTION / (double)cols) + 0.5;
+    qDebug() << "yResolution" << yResolution;
+
+    imgSize = Size(X_RESOLUTION, yResolution);
+
     if (!loadKNNDataAndTrainKNN()) {
         std::cout << std::endl << std::endl << "error: error: KNN traning was not successful" << std::endl;
     }
@@ -392,14 +422,14 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsByKNearestNeighborhood(vecto
         SevenSegmentDigitFeatures currentDigitFeatures = digitFeatures[i];
         Rect rect = currentDigitFeatures.boundRect;
         if( showAllContoursForTest || isPotentialDigitOrDecimalPoint(rect, criteria)) {
-        Mat digitRoi = colorResizedFiltered(rect);
-        digitRoi.convertTo(digitRoi, CV_32F);
-        Mat roi, sample;
-        resize(digitRoi, roi, DIGIT_TEMPLATE_SIZE);
-        roi.reshape(1, 1).convertTo(sample, CV_32F);
+            Mat digitRoi = colorResizedFiltered(rect);
+            digitRoi.convertTo(digitRoi, CV_32F);
+            Mat roi, sample;
+            resize(digitRoi, roi, DIGIT_TEMPLATE_SIZE);
+            roi.reshape(1, 1).convertTo(sample, CV_32F);
 
-        Mat knnResult;
-        int responseValue = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), knnResult);
+            Mat knnResult;
+            int responseValue = (int)kNearest->findNearest(sample, kNearest->getDefaultK(), knnResult);
             String cValue = to_string(responseValue);
             if (responseValue == 10) {
                 decimalFactor /= 10;
@@ -489,14 +519,14 @@ Mat SevenSegmentGaugeReader::getMarkedImage()
     else
         result = markedDigits.clone();
 
-    cv::resize(result, result, Size(300, 400));
+    cv::resize(result, result, imgSize);
     return result;
 }
 
 Mat SevenSegmentGaugeReader::getSourceImage()
 {
     Mat result = srcImage.clone();
-    cv::resize(result, result, Size(300, 400));
+    cv::resize(result, result, imgSize);
     return result;
 }
 
@@ -554,19 +584,19 @@ ReaderResult SevenSegmentGaugeReader::classifyDigitsBySegmentPositions(Mat src, 
             // define the set of 7 segments
             vector<vector<Point2d>> segments;
             vector<Point2d> segment0 =
-                getPoint(Point2d(5, 0), Point2d(w-2, dH + 2)); // top	0
+                    getPoint(Point2d(5, 0), Point2d(w-2, dH + 2)); // top	0
             vector<Point2d> segment1 =
-                getPoint(Point2d(3, 5), Point2d(dW + 5, h/2)); // top left 1
+                    getPoint(Point2d(3, 5), Point2d(dW + 5, h/2)); // top left 1
             vector<Point2d> segment2 =
-                getPoint(Point2d(w - dW, 0), Point2d(w, h/2)); // top right 2
+                    getPoint(Point2d(w - dW, 0), Point2d(w, h/2)); // top right 2
             vector<Point2d> segment3 =
-                getPoint(Point2d(5, (h/2) - (dHC+2)), Point2d(w-5, (h/2) + (dHC+2))); // center 3
+                    getPoint(Point2d(5, (h/2) - (dHC+2)), Point2d(w-5, (h/2) + (dHC+2))); // center 3
             vector<Point2d> segment4 =
-                getPoint(Point2d(0, (h/2)), Point2d(dW, h)); // bottom left 4
+                    getPoint(Point2d(0, (h/2)), Point2d(dW, h)); // bottom left 4
             vector<Point2d> segment5 =
-                getPoint(Point2d(w - dW-5, h/2), Point2d(w-5, h)); // bottom right 5
+                    getPoint(Point2d(w - dW-5, h/2), Point2d(w-5, h)); // bottom right 5
             vector<Point2d> segment6 =
-                getPoint(Point2d(0, h-dH-2), Point2d(w-5, h)); // bottom
+                    getPoint(Point2d(0, h-dH-2), Point2d(w-5, h)); // bottom
             segments.push_back(segment0);
             segments.push_back(segment1);
             segments.push_back(segment2);
@@ -641,7 +671,7 @@ vector<Point2d> SevenSegmentGaugeReader::getPoint(Point2d p1 , Point2d p2) {
 // and https://docs.opencv.org/3.3.0/da/d53/MatchTemplate_Demo_8cpp-example.html#a15
 SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeaturesByMultiScaleTemplateMatch(Mat src)
 {
-    Mat templateDigit8p = loadReferenceImage("MaskDigit8SegmentP_30x40.png");
+    Mat templateDigit8p = loadReferenceImage("MaskDigit8_30x40.png");
     Mat scaledImage;
 
     int templateMatchCannyThreshold1 = 50;
@@ -662,12 +692,13 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
         ImageTools::showImage("multiScaleTemplateMatch: templateEdges", templateEdges);
     }
 
-    const float SCALE_START = 1;
-    const float SCALE_END = 0.2;
+    const float SCALE_START = 1.0;
+    const float SCALE_END = 0.4;
     const int SCALE_POINTS = 20;
+    const float SCALE_STEP = (SCALE_START - SCALE_END)/SCALE_POINTS;
 
     TemplateMatchFeatures foundMatchFeatures = TemplateMatchFeatures();
-    for(float scale = SCALE_START; scale >= SCALE_END; scale -= (SCALE_START - SCALE_END)/SCALE_POINTS) {
+    for(float scale = SCALE_START; scale >= SCALE_END; scale -= SCALE_STEP) {
         resize(src, scaledImage, Size(0,0), scale, scale);
 
         if(templateWidth > scaledImage.cols || templateHeight > scaledImage.rows)
@@ -706,13 +737,14 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
             foundMatchFeatures.scale = scale;
         }
 
-        if (showImageFlags & SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG)
+        if (showImageFlags & SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG
+                && (scale == SCALE_START || scale < SCALE_END + SCALE_STEP))
         {
             Mat target_clone;
             resize(src, target_clone, Size(0,0), scale, scale);
             rectangle(target_clone, Point(maxLoc.x, maxLoc.y), Point(maxLoc.x + templateWidth, maxLoc.y + templateHeight), Scalar(127), 1);
             ImageTools::resetNextWindowPosition();
-            ImageTools::showImage("FindReferenceImage multiscale", target_clone);
+            ImageTools::showImage(scale == SCALE_START ? "FindReferenceImage multiscale START" : "FindReferenceImage multiscale END", target_clone);
             waitKey(100);
         }
     }
@@ -739,6 +771,6 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
     if (showImageFlags & SHOW_FEATURE_EXTRACT_REFERENCE_DIGIT_FLAG) {
         ImageTools::showImage("multiScaleTemplateMatch, markedMatch", markedMatch);
     }
-
-    return SevenSegmentDigitFeatures(endX - startX, endY - startY, endY, startX, -1, foundMatchFeatures.scale);
+    // -5, -4, -2: ignore white border around 8
+    return SevenSegmentDigitFeatures(endX - startX - 5, endY - startY - 4, endY - 2, startX, -1, foundMatchFeatures.scale);
 }

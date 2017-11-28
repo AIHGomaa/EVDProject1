@@ -10,13 +10,13 @@ SevenSegmentDigitCriteria SevenSegmentDigitCriteria::create(SevenSegmentDigitFea
 {
     SevenSegmentDigitCriteria result = SevenSegmentDigitCriteria();
 
-    result.minDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 - digitYTolerance * 1.8) + 0.5;
+    result.minDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 - digitYTolerance * 4) + 0.5;
     result.maxDigitBottomY = referenceDigitFeatures.bottomY * imageScaleFactor * (1 + digitYTolerance) + 0.5;
     // Digits 0 and 2..6 and 8..9
     result.minDigitSize = Size(digitTemplateSize.width *  (1 - digitWTolerance * 2) + 0.5, digitTemplateSize.height * (1 - digitHTolerance * 1.5) + 0.5);
     result.maxDigitSize = Size(digitTemplateSize.width *  (1 + digitWTolerance) + 0.5, digitTemplateSize.height * (1 + digitHTolerance) + 0.5);
     // Digit 1
-    result.minDigit1Size = Size(result.minDigitSize.width * 0.2 + 0.5, result.minDigitSize.height * 0.8 + 0.5);
+    result.minDigit1Size = Size(result.minDigitSize.width * 0.2 + 0.5, result.minDigitSize.height * 0.7 + 0.5);
     result.maxDigit1Size = Size(result.maxDigitSize.width * 0.4 + 0.5, result.maxDigitSize.height * 0.9 + 0.5);
     // Digit 7
     result.minDigit7Size = Size(result.minDigitSize.width * 0.5 + 0.5, result.minDigitSize.height * 0.8);
@@ -25,6 +25,7 @@ SevenSegmentDigitCriteria SevenSegmentDigitCriteria::create(SevenSegmentDigitFea
     result.minDecimalPointSize = Size(result.minDigitSize.width * 0.08 + 0.5, result.minDigitSize.height * 0.08 + 0.5);
     result.maxDecimalPointSize = Size(result.maxDigitSize.width * 0.25 + 0.5, result.maxDigitSize.height * 0.25 + 0.5);
 
+    qDebug() << "referenceDigitFeatures.bottomY" << referenceDigitFeatures.bottomY;
     qDebug() << "minDigitBottomY" << result.minDigitBottomY;
     qDebug() << "maxDigitBottomY" << result.maxDigitBottomY;
     qDebug() << "minDigitSize" << result.minDigitSize.width << result.minDigitSize.height;

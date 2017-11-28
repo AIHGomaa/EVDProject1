@@ -59,19 +59,15 @@ double ImageTools::median(vector<double> collection)
         return collection[size / 2];
 }
 
-// From https://subokita.com/2013/06/18/simple-and-fast-gamma-correction-on-opencv/
+// Derived from https://subokita.com/2013/06/18/simple-and-fast-gamma-correction-on-opencv/
 Mat ImageTools::correctGamma(Mat& img, double gamma)
 {
-    double inverse_gamma = 1.0 / gamma;
-
-    Mat lut_matrix(1, 256, CV_8UC1 );
+    Mat lut_matrix(1, 256, CV_8UC1);
     uchar * ptr = lut_matrix.ptr();
     for( int i = 0; i < 256; i++ )
-        ptr[i] = (int)(pow((double) i / 255.0, inverse_gamma) * 255.0);
+        ptr[i] = (int)((pow((double)i / 255.0, gamma) * 255.0) + 0.5);
 
     Mat result;
     LUT(img, lut_matrix, result);
-
     return result;
 }
-

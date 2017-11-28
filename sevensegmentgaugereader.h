@@ -34,6 +34,10 @@ public:
 
     bool showAllContoursForTest = false;
 
+    int enhanceThreshold = 127;
+    double enhancementThreshFactor = 1;
+    double gammaCorrectionFactor = 4;
+
     int adaptiveThresholdBlockSize = 35;
     int adaptivethresholdC = -25;
     int gaussianBlurSize = 3;
@@ -61,14 +65,15 @@ public:
     double templateMatchThreshold = 0.95;
 
     SevenSegmentGaugeReader();
-    void initialize();
+    void initialize(int cols, int rows);
     ReaderResult ReadGaugeImage(Mat src);
     Mat getMarkedImage();
     Mat getSourceImage();
 private:
     const int X_RESOLUTION = 480;
-    const int Y_RESOLUTION = 640;
-    const Size IMG_SIZE = Size(X_RESOLUTION, Y_RESOLUTION);
+    //    const int Y_RESOLUTION = 640;
+    int yResolution;
+    Size imgSize;
     const int DIGIT_TEMPLATE_X_RESOLUTION = 60;
     const int DIGIT_TEMPLATE_Y_RESOLUTION = 80;
     const Size DIGIT_TEMPLATE_SIZE = Size(DIGIT_TEMPLATE_X_RESOLUTION, DIGIT_TEMPLATE_Y_RESOLUTION);

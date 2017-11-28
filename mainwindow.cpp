@@ -35,6 +35,9 @@ MainWindow::~MainWindow()
 void MainWindow::configGaugeReader()
 {
     SevenSegmentGaugeReader* gr = ((SevenSegmentGaugeReader*)gaugeReader);
+    gr->gammaCorrectionFactor = ui->spnEnhancementGammaCorrectionFactor->value();
+    gr->enhanceThreshold = ui->spnEnhancementBasicThreshold->value();
+    gr->enhancementThreshFactor = ui->spnEnhancementThreshFactor->value();
     gr->adaptiveThresholdBlockSize = ui->spnEnhancementadaptiveThresholdBlockSize->value();
     gr->adaptivethresholdC = ui->spnEnhancementadaptivethresholdC->value();
     gr->gaussianBlurSize = ui->spnEnhancementGaussianKernelSize->value();
@@ -75,19 +78,19 @@ void MainWindow::configGaugeReader()
 
     gr->showAllContoursForTest = ui->chkShowAllContours->checkState();
 
-    gr->initialize();
+    gr->initialize(roi.cols, roi.rows);
 }
 
 void MainWindow::processImage()
 {
     ui->txtReaderResult->clear();
 
-    if(!srcImage.data) {
+    if(!roi.data) {
         return;
     }
 
     configGaugeReader();
-    ReaderResult result = gaugeReader->ReadGaugeImage(srcImage);
+    ReaderResult result = gaugeReader->ReadGaugeImage(roi);
 
     if (ui->chkShowMainImages->checkState())
     {
@@ -131,6 +134,7 @@ void MainWindow::on_btnReadImageValue_clicked()
     Mat blurredBottomRange = srcImage(Range(srcImage.rows - blurredRowHeight, srcImage.rows-1), Range::all());
     blur(blurredTopRange, blurredTopRange, Size(25, 25), Point(-1, -1), BORDER_DEFAULT);
     blur(blurredBottomRange, blurredBottomRange, Size(25, 25), Point(-1, -1), BORDER_DEFAULT);
+    roi = srcImage(Range(blurredRowHeight, srcImage.rows - blurredRowHeight), Range::all());
 
     processImage();
 }
@@ -214,6 +218,7 @@ void MainWindow::on_btnReadCameraImage_clicked()
     }
     cameraImage.copyTo(srcImage);
 
+    roi = srcImage(Range(blurredRowHeight, srcImage.rows - blurredRowHeight), Range::all());
     processImage();
 
     ui->btnReadCameraImage->setText("Read camera capture");
@@ -344,6 +349,21 @@ void MainWindow::on_chkShowFeatureExtractRotationCorrection_clicked()
 }
 
 void MainWindow::on_chkShowAllContours_clicked()
+{
+    processImage();
+}
+
+void MainWindow::on_spnEnhancementBasicThreshold_valueChanged()
+{
+    processImage();
+}
+
+void MainWindow::on_spnEnhancementGammaCorrectionFactor_valueChanged()
+{
+    processImage();
+}
+
+void MainWindow::on_spnEnhancementThreshFactor_valueChanged()
 {
     processImage();
 }
