@@ -676,7 +676,7 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
 
     int templateMatchCannyThreshold1 = 50;
     int templateMatchCannyThreshold2 = 50 * 4;
-    bool templayteMatchByEdges = true;
+    bool templayteMatchByEdges = false;
     int templateMatchMethod = TM_CCORR_NORMED;   // TM_CCOEFF, TM_SQDIFF_NORMED, TM_SQDIFF, TM_CCORR_NORMED
 
     int templateWidth = templateDigit8p.cols;
@@ -692,7 +692,7 @@ SevenSegmentDigitFeatures SevenSegmentGaugeReader::extractReferenceDigitFeatures
         ImageTools::showImage("multiScaleTemplateMatch: templateEdges", templateEdges);
     }
 
-    const float SCALE_START = 1.0;
+    const float SCALE_START = 1.2;
     const float SCALE_END = 0.4;
     const int SCALE_POINTS = 20;
     const float SCALE_STEP = (SCALE_START - SCALE_END)/SCALE_POINTS;
